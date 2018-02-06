@@ -13,7 +13,7 @@ class WalletsContent extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            modalOpen: false,
+            modalOpenCreate: false,
             price: 1.0,
             coins: 0.0,
         };
@@ -41,11 +41,6 @@ class WalletsContent extends React.Component {
         });
     }
 
-    showModal() {
-        this.setState({
-            modalOpen: true,
-        });
-    }
 
     handleCreate() {
         this.form.validateFields((err, values) => {
@@ -68,14 +63,14 @@ class WalletsContent extends React.Component {
             this.form.resetFields();
 
             this.setState({
-                modalOpen: false,
+                modalOpenCreate: false,
             });
         });
     }
 
     handleCancel() {
         this.setState({
-            modalOpen: false,
+            modalOpenCreate: false,
         });
     }
 
@@ -83,7 +78,7 @@ class WalletsContent extends React.Component {
         this.form = form;
     }
 
-    createKey (network) {
+    createKey(network) {
         const mnemonic = bip39.generateMnemonic();
         const seed = bip39.mnemonicToSeed(mnemonic);
         const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks[network || 'testnet']);
@@ -105,18 +100,18 @@ class WalletsContent extends React.Component {
                     <Button
                       type="primary"
                       icon="down-square-o"
-                      onClick={this.showModal}>Import
+                      onClick={() => this.setState({ modalOpenCreate: true, })}>Import
                     </Button>
                     <span style={{ marginRight: '8px' }} />
                     <Button
                       type="primary"
                       icon="plus-circle-o"
-                      onClick={this.showModal}>Create
+                      onClick={() => this.setState({ modalOpenCreate: true, })}>Create
                     </Button>
                 </div>
                 <Modal
                   title="Create a New Wallet"
-                  visible={this.state.modalOpen}
+                  visible={this.state.modalOpenCreate}
                   okText="Create"
                   onCancel={this.handleCancel}
                   onOk={this.handleCreate}>
