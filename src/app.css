@@ -1,0 +1,15 @@
+.App-title {
+    font-size: 1.5em;
+}
+
+.App-intro {
+    font-size: large;
+}
+
+.Header > h3 {
+    color: gray;
+}
+
+.ant-layout {
+    height: 100vh;
+}
