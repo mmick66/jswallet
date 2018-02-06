@@ -24,6 +24,7 @@ class WalletsContent extends React.Component {
         this.handleCreate = this.handleCreate.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.saveFormPntr = this.saveFormPntr.bind(this);
+        this.reloadOutput = this.reloadOutput.bind(this);
     }
 
 
@@ -47,17 +48,15 @@ class WalletsContent extends React.Component {
             if (err) return;
 
             const name = values.name;
-            const net = 'testnet';
-            const master = this.createKey(net);
+            const master = this.createKey('testnet');
 
             const address = master.derivePath(this.derivationPath).getAddress();
             // let privateKey  = master.derivePath(this.derivationPath).keyPair.toWIF();
 
             this.wallets.push({
-                key: address,
-                name,
-                address,
-                net,
+                name: name,
+                address: address,
+                coins: 0
             });
 
             this.form.resetFields();
@@ -86,12 +85,16 @@ class WalletsContent extends React.Component {
         return master;
     }
 
+    reloadOutput() {
+
+    }
+
     render() {
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name', render: text => <a href="#">{text}</a> },
             { title: 'Address', dataIndex: 'address', key: 'address' },
-            { title: 'Network', dataIndex: 'net', key: 'net' },
-            { title: 'Action', key: 'action', render: () => <a href="#">Delete</a> },
+            { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
+            { title: 'Action', key: 'action', render: () => <a>Delete</a> },
         ];
 
         return (
@@ -102,12 +105,17 @@ class WalletsContent extends React.Component {
                       icon="down-square-o"
                       onClick={() => this.setState({ modalOpenCreate: true, })}>Import
                     </Button>
-                    <span style={{ marginRight: '8px' }} />
                     <Button
                       type="primary"
                       icon="plus-circle-o"
+                      style={{ marginLeft: '8px' }}
                       onClick={() => this.setState({ modalOpenCreate: true, })}>Create
                     </Button>
+                    <Button type="primary"
+                            shape="circle"
+                            icon="reload"
+                            style={{ marginLeft: '8px' }}
+                            onClick={this.reloadOutput} />
                 </div>
                 <Modal
                   title="Create a New Wallet"
