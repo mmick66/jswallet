@@ -4,6 +4,8 @@
     "indent": ["warn", 4],
     "comma-dangle": 0,
     "padded-blocks": 0,
+    "prefer-template":0,
+    "arrow-body-style": ["warn", "never"],
     "no-trailing-spaces": 0,
     "max-len": ["warn", { "code": 180 }],
     "no-multiple-empty-lines": 0,

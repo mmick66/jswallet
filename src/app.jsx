@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs, Icon, Layout } from 'antd';
 import WalletsContent from './wallets.content.component';
 import StatsContent from './stats.content.component';
+import TransactionsContent from './transactions.content.component.jsx';
 
 const { Header, Footer, Content } = Layout;
 
@@ -21,7 +22,7 @@ class App extends React.Component {
                                 <WalletsContent />
                             </Tabs.TabPane>
                             <Tabs.TabPane tab={<span><Icon type="solution" />Transactions</span>} key="2">
-                                Content of Tab Pane 2
+                                <TransactionsContent />
                             </Tabs.TabPane>
                             <Tabs.TabPane tab={<span><Icon type="area-chart" />Stats</span>}key="3">
                                 <StatsContent />

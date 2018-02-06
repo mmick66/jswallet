@@ -1,13 +1,12 @@
 import React from 'react';
 
-
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 
-import CreateForm from './create.form.component';
-
 import { Button, Table, Modal } from 'antd';
 import { exchange, blockexplorer } from 'blockchain.info';
+
+import CreateForm from './create.form.component';
 
 class WalletsContent extends React.Component {
 

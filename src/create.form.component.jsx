@@ -2,7 +2,6 @@ import React from 'react';
 
 import { Input, Form, Icon } from 'antd';
 
-
 class CreateForm extends React.Component {
 
     constructor(props) {
