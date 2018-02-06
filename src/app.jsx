@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs, Icon, Layout } from 'antd';
 import WalletsContent from './wallets.content.component';
+import StatsContent from './stats.content.component';
 
 const { Header, Footer, Content } = Layout;
 
@@ -23,7 +24,7 @@ class App extends React.Component {
                                 Content of Tab Pane 2
                             </Tabs.TabPane>
                             <Tabs.TabPane tab={<span><Icon type="area-chart" />Stats</span>}key="3">
-                                Content of Tab Pane 2
+                                <StatsContent />
                             </Tabs.TabPane>
                         </Tabs>
                     </div>

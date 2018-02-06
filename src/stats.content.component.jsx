@@ -14,7 +14,9 @@ class StatsContent extends React.Component {
 
     componentDidMount() {
         statistics.getChartData('market-price', { timespan: '90d' }).then((r) => {
-            console.log(r);
+            this.setState({
+               data: r,
+            });
         }).catch((e) => {
             console.log(e);
         });
