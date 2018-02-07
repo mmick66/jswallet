@@ -9,6 +9,8 @@ import Datastore from 'nedb';
 
 import crypto from 'crypto';
 
+import {clipboard} from 'electron';
+
 import CreateForm from './create.form.modal.component';
 
 
@@ -150,8 +152,9 @@ class WalletsContent extends React.Component {
 
     }
 
-    render() {
 
+
+    render() {
 
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name' },
@@ -160,6 +163,15 @@ class WalletsContent extends React.Component {
             { title: 'Send', key: 'send', render: () => <Button icon="login" /> },
             { title: 'Action', key: 'action', render: () => <a>Delete</a> },
         ];
+
+        const onRowFactory = (record) => {
+            const config = {};
+            config.onClick = () => {
+                clipboard.writeText(record.address);
+                message.success('Adress copied to the clipboard');
+            };
+            return config;
+        };
 
         return (
             <div className="Wallets">
@@ -192,7 +204,12 @@ class WalletsContent extends React.Component {
                       ref={this.saveFormPntr}
                       handleCreate={this.handleCreate} />
                 </Modal>
-                <Table columns={columns} dataSource={this.state.wallets} style={{ height: '250px', backgroundColor: 'white' }} />
+
+                <Table columns={columns}
+                       dataSource={this.state.wallets}
+                       onRow={onRowFactory}
+                       style={{ height: '250px', backgroundColor: 'white' }} />
+
                 <div style={{ marginTop: '24px' }}>
                     <h3>Total: {`$${this.state.coins * this.state.price}` }</h3>
                 </div>
