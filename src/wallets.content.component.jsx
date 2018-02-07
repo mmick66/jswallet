@@ -3,13 +3,14 @@ import React from 'react';
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 
-import { Button, Table, Modal, message } from 'antd';
+import { Button, Table, Modal, message, Icon } from 'antd';
 import { exchange, blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
 
 import crypto from 'crypto';
 
 import CreateForm from './create.form.modal.component';
+
 
 class WalletsContent extends React.Component {
 
@@ -150,10 +151,13 @@ class WalletsContent extends React.Component {
     }
 
     render() {
+
+
         const columns = [
-            { title: 'Name', dataIndex: 'name', key: 'name', render: text => <a>{text}</a> },
+            { title: 'Name', dataIndex: 'name', key: 'name' },
             { title: 'Address', dataIndex: 'address', key: 'address' },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
+            { title: 'Send', key: 'send', render: () => <Button icon="login" /> },
             { title: 'Action', key: 'action', render: () => <a>Delete</a> },
         ];
 
@@ -188,7 +192,7 @@ class WalletsContent extends React.Component {
                       ref={this.saveFormPntr}
                       handleCreate={this.handleCreate} />
                 </Modal>
-                <Table columns={columns} dataSource={this.state.wallets} />
+                <Table columns={columns} dataSource={this.state.wallets} style={{ height: '250px', backgroundColor: 'white' }} />
                 <div style={{ marginTop: '24px' }}>
                     <h3>Total: {`$${this.state.coins * this.state.price}` }</h3>
                 </div>
