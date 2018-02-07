@@ -9,7 +9,7 @@ import Datastore from 'nedb';
 
 import crypto from 'crypto';
 
-import CreateForm from './create.form.component';
+import CreateForm from './create.form.modal.component';
 
 class WalletsContent extends React.Component {
 
@@ -19,7 +19,8 @@ class WalletsContent extends React.Component {
             modalOpenCreate: false,
             price: 1.0,
             coins: 0.0,
-            wallets: []
+            wallets: [],
+            creatingKeys: false
         };
 
         this.derivationPath = "m/44'/0'/0'/0/0";
@@ -68,7 +69,12 @@ class WalletsContent extends React.Component {
 
             if (err) return;
 
-            crypto.pbkdf2(values.password, 'jswallet', 1024, 48, 'sha512', (err, data) => {
+            this.setState({
+                creatingKeys: true
+            });
+
+            crypto.pbkdf2(values.password, 'jswallet', 2048, 48, 'sha512', (err, data) => {
+
                 if (err) {
                     message.error('Could not hash the password');
                     return;
@@ -83,9 +89,6 @@ class WalletsContent extends React.Component {
                 const hash = data.toString('hex');
                 this.createWallet(values.name, hash);
             });
-
-
-
         });
     }
 
@@ -179,6 +182,7 @@ class WalletsContent extends React.Component {
                   visible={this.state.modalOpenCreate}
                   okText="Create"
                   onCancel={this.handleCancel}
+                  confirmLoading={this.state.creatingKeys}
                   onOk={this.handleCreate}>
                     <CreateForm
                       ref={this.saveFormPntr}
