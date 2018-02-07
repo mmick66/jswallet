@@ -18,10 +18,10 @@ class WalletsContent extends React.Component {
             modalOpenCreate: false,
             price: 1.0,
             coins: 0.0,
+            wallets: []
         };
 
         this.derivationPath = "m/44'/0'/0'/0/0";
-        this.wallets = [];
 
         this.handleCreate = this.handleCreate.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
@@ -35,8 +35,6 @@ class WalletsContent extends React.Component {
 
     componentDidMount() {
 
-
-
         exchange.getTicker({ currency: 'USD' }).then((r) => {
             this.setState({ price: r.sell });
         }).catch((e) => {
@@ -47,6 +45,18 @@ class WalletsContent extends React.Component {
             this.setState({ price: r.sell });
         }).catch((e) => {
             console.log(e);
+        });
+
+        this.db.find({ active: true }, (err, docs) => {
+            if (err) {
+                message.error('The wallets could not be loaded from the local db!');
+            }
+            console.log(docs);
+
+            this.setState({
+                wallets: this.state.wallets.concat(docs)
+            });
+
         });
     }
 
@@ -62,19 +72,20 @@ class WalletsContent extends React.Component {
             const privateKey = master.derivePath(this.derivationPath).keyPair.toWIF();
 
             const wallet = {
+                key: address,
                 name: name,
                 address: address,
                 coins: 0,
                 pvtk: privateKey,
-                pass: ''
+                pass: '',
+                active: true
             };
-
-            this.wallets.push(wallet);
 
             this.form.resetFields();
 
             this.setState({
                 modalOpenCreate: false,
+                wallets: this.state.wallets.concat([wallet])
             });
 
             this.db.insert(wallet, (err) => {
@@ -148,7 +159,7 @@ class WalletsContent extends React.Component {
                       ref={this.saveFormPntr}
                       handleCreate={this.handleCreate} />
                 </Modal>
-                <Table columns={columns} dataSource={this.wallets} />
+                <Table columns={columns} dataSource={this.state.wallets} />
                 <div style={{ marginTop: '24px' }}>
                     <h3>Total: {`$${this.state.coins * this.state.price}` }</h3>
                 </div>
