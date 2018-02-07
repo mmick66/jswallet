@@ -4,3 +4,6 @@ out
 
 # WebStorm Project
 .idea
+
+# NeDB local file
+db

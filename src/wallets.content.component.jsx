@@ -3,8 +3,10 @@ import React from 'react';
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 
-import { Button, Table, Modal } from 'antd';
+import { Button, Table, Modal, message } from 'antd';
 import { exchange, blockexplorer } from 'blockchain.info';
+import Datastore from 'nedb';
+
 
 import CreateForm from './create.form.component';
 
@@ -25,10 +27,16 @@ class WalletsContent extends React.Component {
         this.handleCancel = this.handleCancel.bind(this);
         this.saveFormPntr = this.saveFormPntr.bind(this);
         this.reloadOutput = this.reloadOutput.bind(this);
+
+        this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
+
     }
 
 
     componentDidMount() {
+
+
+
         exchange.getTicker({ currency: 'USD' }).then((r) => {
             this.setState({ price: r.sell });
         }).catch((e) => {
@@ -51,18 +59,30 @@ class WalletsContent extends React.Component {
             const master = this.createKey('testnet');
 
             const address = master.derivePath(this.derivationPath).getAddress();
-            // let privateKey  = master.derivePath(this.derivationPath).keyPair.toWIF();
+            const privateKey = master.derivePath(this.derivationPath).keyPair.toWIF();
 
-            this.wallets.push({
+            const wallet = {
                 name: name,
                 address: address,
-                coins: 0
-            });
+                coins: 0,
+                pvtk: privateKey,
+                pass: ''
+            };
+
+            this.wallets.push(wallet);
 
             this.form.resetFields();
 
             this.setState({
                 modalOpenCreate: false,
+            });
+
+            this.db.insert(wallet, (err) => {
+                if (err) {
+                    message.warning('The wallet could not saved to the local db!');
+                } else {
+                    message.success('This wallet was saved to the local db!');
+                }
             });
         });
     }
@@ -86,6 +106,7 @@ class WalletsContent extends React.Component {
     }
 
     reloadOutput() {
+
 
     }
 
