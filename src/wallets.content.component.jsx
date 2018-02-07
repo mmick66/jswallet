@@ -7,6 +7,7 @@ import { Button, Table, Modal, message } from 'antd';
 import { exchange, blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
 
+import crypto from 'crypto';
 
 import CreateForm from './create.form.component';
 
@@ -48,10 +49,11 @@ class WalletsContent extends React.Component {
         });
 
         this.db.find({ active: true }, (err, docs) => {
+
             if (err) {
                 message.error('The wallets could not be loaded from the local db!');
+                return;
             }
-            console.log(docs);
 
             this.setState({
                 wallets: this.state.wallets.concat(docs)
@@ -60,41 +62,71 @@ class WalletsContent extends React.Component {
         });
     }
 
-
     handleCreate() {
+
         this.form.validateFields((err, values) => {
+
             if (err) return;
 
-            const name = values.name;
-            const master = this.createKey('testnet');
-
-            const address = master.derivePath(this.derivationPath).getAddress();
-            const privateKey = master.derivePath(this.derivationPath).keyPair.toWIF();
-
-            const wallet = {
-                key: address,
-                name: name,
-                address: address,
-                coins: 0,
-                pvtk: privateKey,
-                pass: '',
-                active: true
-            };
-
-            this.form.resetFields();
-
-            this.setState({
-                modalOpenCreate: false,
-                wallets: this.state.wallets.concat([wallet])
-            });
-
-            this.db.insert(wallet, (err) => {
+            crypto.pbkdf2(values.password, 'jswallet', 1024, 48, 'sha512', (err, data) => {
                 if (err) {
-                    message.warning('The wallet could not saved to the local db!');
-                } else {
-                    message.success('This wallet was saved to the local db!');
+                    message.error('Could not hash the password');
+                    return;
                 }
+
+                this.form.resetFields();
+
+                this.setState({
+                    modalOpenCreate: false,
+                });
+
+                const hash = data.toString('hex');
+                this.createWallet(values.name, hash);
             });
+
+
+
+        });
+    }
+
+    createWallet(name, hash) {
+
+        const mnemonic = bip39.generateMnemonic();
+        const seed = bip39.mnemonicToSeed(mnemonic);
+        const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks.testnet);
+
+        const address = master.derivePath(this.derivationPath).getAddress();
+        const privateKey = master.derivePath(this.derivationPath).keyPair.toWIF();
+
+        const cipher = crypto.createCipher('aes-256-cbc', hash);
+        const encrypted = cipher.update(privateKey, 'hex') + cipher.final('hex');
+
+        const wallet = {
+            key: address,
+            name: name,
+            address: address,
+            coins: 0,
+            pvtk: encrypted,
+            pass: hash,
+            active: true
+        };
+
+        this.addWallet(wallet);
+
+    }
+
+    addWallet(wallet) {
+
+        this.setState({
+            wallets: this.state.wallets.concat([wallet])
+        });
+
+        this.db.insert(wallet, (err) => {
+            if (err) {
+                message.warning('The wallet could not saved to the local db!');
+            } else {
+                message.success('This wallet was saved to the local db!');
+            }
         });
     }
 
@@ -108,13 +140,6 @@ class WalletsContent extends React.Component {
         this.form = form;
     }
 
-    createKey(network) {
-        const mnemonic = bip39.generateMnemonic();
-        const seed = bip39.mnemonicToSeed(mnemonic);
-        const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks[network || 'testnet']);
-
-        return master;
-    }
 
     reloadOutput() {
 
@@ -123,7 +148,7 @@ class WalletsContent extends React.Component {
 
     render() {
         const columns = [
-            { title: 'Name', dataIndex: 'name', key: 'name', render: text => <a href="#">{text}</a> },
+            { title: 'Name', dataIndex: 'name', key: 'name', render: text => <a>{text}</a> },
             { title: 'Address', dataIndex: 'address', key: 'address' },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
             { title: 'Action', key: 'action', render: () => <a>Delete</a> },
