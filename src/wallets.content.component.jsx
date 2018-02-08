@@ -3,13 +3,15 @@ import React from 'react';
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 
-import { Button, Table, Modal, message, Icon } from 'antd';
+import { Button, Table, Modal, message } from 'antd';
 import { exchange, blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
 
 import crypto from 'crypto';
 
-import {clipboard} from 'electron';
+import { clipboard } from 'electron';
+
+const env = require('./env.json');
 
 import CreateForm from './create.form.modal.component';
 
@@ -17,6 +19,7 @@ import CreateForm from './create.form.modal.component';
 class WalletsContent extends React.Component {
 
     constructor(props) {
+
         super(props);
         this.state = {
             modalOpenCreate: false,
@@ -26,27 +29,18 @@ class WalletsContent extends React.Component {
             creatingKeys: false
         };
 
-        this.derivationPath = "m/44'/0'/0'/0/0";
-
         this.handleCreate = this.handleCreate.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.saveFormPntr = this.saveFormPntr.bind(this);
-        this.reloadOutput = this.reloadOutput.bind(this);
+        this.loadAllUTXOs = this.loadAllUTXOs.bind(this);
 
         this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
-
     }
 
 
     componentDidMount() {
 
         exchange.getTicker({ currency: 'USD' }).then((r) => {
-            this.setState({ price: r.sell });
-        }).catch((e) => {
-            console.log(e);
-        });
-
-        blockexplorer.getUnspentOutputs('').then((r) => {
             this.setState({ price: r.sell });
         }).catch((e) => {
             console.log(e);
@@ -59,10 +53,9 @@ class WalletsContent extends React.Component {
                 return;
             }
 
-            this.setState({
-                wallets: this.state.wallets.concat(docs)
-            });
+            this.setState({ wallets: this.state.wallets.concat(docs) });
 
+            this.loadAllUTXOs();
         });
     }
 
@@ -98,11 +91,13 @@ class WalletsContent extends React.Component {
     createWallet(name, hash) {
 
         const mnemonic = bip39.generateMnemonic();
-        const seed = bip39.mnemonicToSeed(mnemonic);
-        const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks.testnet);
 
-        const address = master.derivePath(this.derivationPath).getAddress();
-        const privateKey = master.derivePath(this.derivationPath).keyPair.toWIF();
+        const seed = bip39.mnemonicToSeed(mnemonic);
+        const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks[env.network]);
+
+        const derived = master.derivePath("m/44'/0'/0'/0/0");
+        const address = derived.getAddress();
+        const privateKey = derived.keyPair.toWIF();
 
         const cipher = crypto.createCipher('aes-256-cbc', hash);
         const encrypted = cipher.update(privateKey, 'hex') + cipher.final('hex');
@@ -112,9 +107,10 @@ class WalletsContent extends React.Component {
             name: name,
             address: address,
             coins: 0,
-            pvtk: encrypted,
+            encwif: encrypted,
             pass: hash,
-            active: true
+            active: true,
+            utxos: []
         };
 
         this.addWallet(wallet);
@@ -147,23 +143,52 @@ class WalletsContent extends React.Component {
     }
 
 
-    reloadOutput() {
+    loadAllUTXOs() {
+
+        const explorer = env.network === 'testnet' ? blockexplorer.usingNetwork(3) : blockexplorer;
+        const wallets = this.state.wallets;
+        const promises = wallets.map(w => explorer.getUnspentOutputs(w.address));
+
+        Promise.all(promises).then((all) => {
+
+            all.forEach((obj, i) => {
+
+                const utxos = obj.unspent_outputs;
+                wallets[i].utxos = utxos;
+
+                wallets[i].coins = utxos.reduce((acc, curr) => {
+                    return acc + curr.value;
+                }, 0) / 100000000;
+            });
+
+            this.setState({
+                wallets: wallets,
+                coins: wallets.map(w => w.coins).reduce((acc, curr) => acc + curr, 0),
+            });
+
+        }).catch((e) => {
+            console.log(e);
+        });
 
 
     }
 
-
-
     render() {
+
+        const send = (event) => {
+            event.stopPropagation();
+
+        };
 
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name' },
             { title: 'Address', dataIndex: 'address', key: 'address' },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
-            { title: 'Send', key: 'send', render: () => <Button icon="login" /> },
+            { title: 'Send', key: 'send', render: () => <Button onClick={send} icon="login" /> },
             { title: 'Action', key: 'action', render: () => <a>Delete</a> },
         ];
 
+        // full example: https://codesandbox.io/s/000vqw38rl
         const onRowFactory = (record) => {
             const config = {};
             config.onClick = () => {
@@ -191,7 +216,7 @@ class WalletsContent extends React.Component {
                             shape="circle"
                             icon="reload"
                             style={{ marginLeft: '8px' }}
-                            onClick={this.reloadOutput} />
+                            onClick={this.loadAllUTXOs} />
                 </div>
                 <Modal
                   title="Create a New Wallet"
@@ -208,10 +233,11 @@ class WalletsContent extends React.Component {
                 <Table columns={columns}
                        dataSource={this.state.wallets}
                        onRow={onRowFactory}
+                       pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
 
                 <div style={{ marginTop: '24px' }}>
-                    <h3>Total: {`$${this.state.coins * this.state.price}` }</h3>
+                    <h3>Total: {`$${(this.state.coins * this.state.price).toFixed(2)}` }</h3>
                 </div>
             </div>
         );
