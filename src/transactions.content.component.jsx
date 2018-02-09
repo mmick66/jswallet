@@ -2,7 +2,6 @@ import React from 'react';
 import { blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
 import { Button, Table, Modal, message } from 'antd';
-import { clipboard } from "electron";
 const env = require('./env.json');
 class TransactionsContent extends React.Component {
 
@@ -12,10 +11,7 @@ class TransactionsContent extends React.Component {
             transactions: []
         };
 
-        this.rawTransactions = [];
-
         this.showDetails = this.showDetails.bind(this);
-        this.parseRawTransactions = this.parseRawTransactions.bind(this);
 
         this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
     }
@@ -39,25 +35,39 @@ class TransactionsContent extends React.Component {
         const explorer = env.network === 'testnet' ? blockexplorer.usingNetwork(3) : blockexplorer;
         explorer.getMultiAddress(addresses, {}).then((result) => {
 
-            this.rawTransactions = result;
+            this.transactions = Array.isArray(result.txs) ? result.txs : [];
 
-            const allOutputs = [];
-            this.rawTransactions.forEach((tx) => {
-                tx.out.forEach((out) => {
-                    allOutputs.push({
-                        address: out.addr,
-                        value: out.value,
-                        transaction: tx.hash
-                    });
-                });
-            });
-
-            this.setState({ outputs: allOutputs });
-
-
-        }).catch(() => {
+        }).catch((e) => {
+            console.log(e);
             message.error('Could not fetch transactions');
         });
+
+    }
+
+    set transactions(data) {
+
+        this._transactions = data;
+
+        const allOutputs = [];
+        data.forEach((tx) => {
+            tx.out.forEach((out, i) => {
+                allOutputs.push({
+                    key: i,
+                    address: out.addr,
+                    coins: out.value / 100000000,
+                });
+            });
+        });
+
+        this.setState({ outputs: allOutputs });
+    }
+
+    get transactions() {
+        if (!this._transactions) this._transactions = [];
+        return this._transactions;
+    }
+
+    showDetails(record) {
 
     }
 
@@ -65,12 +75,10 @@ class TransactionsContent extends React.Component {
     render() {
 
         const columns = [
-            { title: 'Hash', dataIndex: 'hash', key: 'hash' },
             { title: 'Address', dataIndex: 'address', key: 'address' },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
         ];
 
-        // full example: https://codesandbox.io/s/000vqw38rl
         const onRowFactory = (record) => {
             const config = {};
             config.onClick = () => {
@@ -82,7 +90,7 @@ class TransactionsContent extends React.Component {
         return (
             <div>
                 <Table columns={columns}
-                       dataSource={this.state.wallets}
+                       dataSource={this.state.outputs}
                        onRow={onRowFactory}
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
