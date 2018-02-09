@@ -29,6 +29,7 @@ class WalletsContent extends React.Component {
             wallets: [],
             creatingKeys: false,
             sendingPayment: false,
+            sourceWallet: null,
         };
 
         this.handleCreate = this.handleCreate.bind(this);
@@ -183,16 +184,19 @@ class WalletsContent extends React.Component {
 
     render() {
 
-        const send = (event, record) => {
+        const openSendModal = (event, record) => {
             event.stopPropagation();
-            console.log(record);
+            this.setState({
+                sourceWallet: record,
+                modalOpenSend: true,
+            });
         };
 
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name' },
             { title: 'Address', dataIndex: 'address', key: 'address' },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
-            { title: 'Send', key: 'send', render: r => <Button onClick={ e => send(e,r) } icon="login" /> },
+            { title: 'Send', key: 'send', render: r => <Button onClick={e => openSendModal(e, r)} icon="login" /> },
             { title: 'Action', key: 'action', render: () => <a>Delete</a> },
         ];
 
@@ -251,7 +255,7 @@ class WalletsContent extends React.Component {
                     onCancel={this.handleCancel}
                     confirmLoading={this.state.sendingPayment}
                     onOk={this.handleSendit}>
-                    <CreateTransaction />
+                    <CreateTransaction sender={this.state.sourceWallet} />
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
