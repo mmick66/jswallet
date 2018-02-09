@@ -21,10 +21,10 @@ class App extends React.Component {
                             <Tabs.TabPane tab={<span><Icon type="wallet" />Wallets</span>} key="1">
                                 <WalletsContent />
                             </Tabs.TabPane>
-                            <Tabs.TabPane tab={<span><Icon type="pay-circle-o" />Payments</span>} key="2">
+                            <Tabs.TabPane tab={<span><Icon type="credit-card" />Payments</span>} key="2">
                                 <TransactionsContent />
                             </Tabs.TabPane>
-                            <Tabs.TabPane tab={<span><Icon type="area-chart" />Stats</span>}key="3">
+                            <Tabs.TabPane tab={<span><Icon type="line-chart" />Stats</span>}key="3">
                                 <StatsContent />
                             </Tabs.TabPane>
                         </Tabs>

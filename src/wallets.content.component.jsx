@@ -11,10 +11,10 @@ import crypto from 'crypto';
 
 import { clipboard } from 'electron';
 
-const env = require('./env.json');
-
 import CreateForm from './create.form.modal.component';
+import CreateTransaction from './create.transaction.modal.component';
 
+const env = require('./env.json');
 
 class WalletsContent extends React.Component {
 
@@ -23,13 +23,16 @@ class WalletsContent extends React.Component {
         super(props);
         this.state = {
             modalOpenCreate: false,
+            modalOpenSend: false,
             price: 1.0,
             coins: 0.0,
             wallets: [],
-            creatingKeys: false
+            creatingKeys: false,
+            sendingPayment: false,
         };
 
         this.handleCreate = this.handleCreate.bind(this);
+        this.handleSendit = this.handleCreate.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
         this.saveFormPntr = this.saveFormPntr.bind(this);
         this.loadAllUTXOs = this.loadAllUTXOs.bind(this);
@@ -88,6 +91,10 @@ class WalletsContent extends React.Component {
         });
     }
 
+    handleSendit() {
+
+    }
+
     createWallet(name, hash) {
 
         const mnemonic = bip39.generateMnemonic();
@@ -135,6 +142,7 @@ class WalletsContent extends React.Component {
     handleCancel() {
         this.setState({
             modalOpenCreate: false,
+            modalOpenSend: false,
         });
     }
 
@@ -175,16 +183,16 @@ class WalletsContent extends React.Component {
 
     render() {
 
-        const send = (event) => {
+        const send = (event, record) => {
             event.stopPropagation();
-
+            console.log(record);
         };
 
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name' },
             { title: 'Address', dataIndex: 'address', key: 'address' },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
-            { title: 'Send', key: 'send', render: () => <Button onClick={send} icon="login" /> },
+            { title: 'Send', key: 'send', render: r => <Button onClick={ e => send(e,r) } icon="login" /> },
             { title: 'Action', key: 'action', render: () => <a>Delete</a> },
         ];
 
@@ -235,6 +243,16 @@ class WalletsContent extends React.Component {
                        onRow={onRowFactory}
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
+
+                <Modal
+                    title="Send Money"
+                    visible={this.state.modalOpenSend}
+                    okText="Send"
+                    onCancel={this.handleCancel}
+                    confirmLoading={this.state.sendingPayment}
+                    onOk={this.handleSendit}>
+                    <CreateTransaction />
+                </Modal>
 
                 <div style={{ marginTop: '24px' }}>
                     <h3>Total: {`$${(this.state.coins * this.state.price).toFixed(2)}` }</h3>
