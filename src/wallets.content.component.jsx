@@ -7,12 +7,12 @@ import { Button, Table, Modal, message } from 'antd';
 import { exchange, blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
 
-import crypto from 'crypto';
 
 import { clipboard } from 'electron';
 
 import CreateForm from './create.form.modal.component';
 import CreateTransaction from './create.transaction.modal.component';
+import Hasher from './logic/hasher.util';
 
 const env = require('./env.json');
 
@@ -35,7 +35,6 @@ class WalletsContent extends React.Component {
         this.handleCreate = this.handleCreate.bind(this);
         this.handleSendit = this.handleCreate.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
-        this.saveFormPntr = this.saveFormPntr.bind(this);
         this.loadAllUTXOs = this.loadAllUTXOs.bind(this);
 
         this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
@@ -73,7 +72,7 @@ class WalletsContent extends React.Component {
                 creatingKeys: true
             });
 
-            crypto.pbkdf2(values.password, 'jswallet', 2048, 48, 'sha512', (err, data) => {
+            Hasher.hash(values.password).then((hash) => {
 
                 if (err) {
                     message.error('Could not hash the password');
@@ -86,15 +85,12 @@ class WalletsContent extends React.Component {
                     modalOpenCreate: false,
                 });
 
-                const hash = data.toString('hex');
                 this.createWallet(values.name, hash);
             });
+
         });
     }
 
-    handleSendit() {
-
-    }
 
     createWallet(name, hash) {
 
@@ -105,10 +101,9 @@ class WalletsContent extends React.Component {
 
         const derived = master.derivePath("m/44'/0'/0'/0/0");
         const address = derived.getAddress();
-        const privateKey = derived.keyPair.toWIF();
+        const wif = derived.keyPair.toWIF();
 
-        const cipher = crypto.createCipher('aes-256-cbc', hash);
-        const encrypted = cipher.update(privateKey, 'hex') + cipher.final('hex');
+        const encrypted = Hasher.encrypt(wif, hash);
 
         const wallet = {
             key: address,
@@ -122,6 +117,23 @@ class WalletsContent extends React.Component {
         };
 
         this.addWallet(wallet);
+
+    }
+
+    handleSendit() {
+
+        Hasher.hash('p').then((hash) => {
+
+            const encrypted = this.state.sourceWallet.encwif;
+            const decrypted = Hasher.decrypt(encrypted, hash);
+            const key = bitcoin.ECKey.fromWIF(decrypted);
+
+            const tx = new bitcoin.TransactionBuilder();
+            tx.addInput("d18e7106e5492baf8f3929d2d573d27d89277f3825d3836aa86ea1d843b5158b", 1);
+            tx.addOutput("12idKQBikRgRuZEbtxXQ4WFYB7Wa3hZzhT", 149000);
+            tx.sign(0, key);
+            console.log(tx.build().toHex());
+        });
 
     }
 
@@ -145,12 +157,8 @@ class WalletsContent extends React.Component {
             modalOpenCreate: false,
             modalOpenSend: false,
         });
+        this.form = null;
     }
-
-    saveFormPntr(form) {
-        this.form = form;
-    }
-
 
     loadAllUTXOs() {
 
@@ -238,8 +246,8 @@ class WalletsContent extends React.Component {
                   confirmLoading={this.state.creatingKeys}
                   onOk={this.handleCreate}>
                     <CreateForm
-                      ref={this.saveFormPntr}
-                      handleCreate={this.handleCreate} />
+                        ref={form => (this.form = form)}
+                        handleCreate={this.handleCreate} />
                 </Modal>
 
                 <Table columns={columns}
@@ -255,7 +263,10 @@ class WalletsContent extends React.Component {
                     onCancel={this.handleCancel}
                     confirmLoading={this.state.sendingPayment}
                     onOk={this.handleSendit}>
-                    <CreateTransaction sender={this.state.sourceWallet} rate={1.0 / this.state.price} />
+                    <CreateTransaction
+                        ref={form => (this.form = form)}
+                        sender={this.state.sourceWallet}
+                        rate={1.0 / this.state.price} />
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
