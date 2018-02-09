@@ -255,7 +255,7 @@ class WalletsContent extends React.Component {
                     onCancel={this.handleCancel}
                     confirmLoading={this.state.sendingPayment}
                     onOk={this.handleSendit}>
-                    <CreateTransaction sender={this.state.sourceWallet} />
+                    <CreateTransaction sender={this.state.sourceWallet} rate={1.0 / this.state.price} />
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>

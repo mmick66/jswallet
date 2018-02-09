@@ -17,11 +17,32 @@ class CreateTransaction extends React.Component {
     constructor(props) {
         super(props);
 
-        this.handleChange = this.handleChange;
+        this.rate = props.rate || 1.0;
+
+        console.log(this.rate);
+
+        this.state = {
+            amountInDollars: 0.0,
+            amountInBitcoin: 0.0
+        };
+
+        this.handleNewDollarAmount = this.handleNewDollarAmount.bind(this);
     }
 
-    handleChange(e) {
-        console.log(e);
+    handleNewDollarAmount(e) {
+
+
+        const inpValue = e.target.value;
+        const newValue = inpValue ? parseInt(inpValue, 10) * this.rate : 0.0;
+
+        if (isNaN(newValue)) {
+            console.log('NAN!!!')
+            return;
+        }
+        this.setState({
+            amountInDollars: inpValue,
+            amountInBitcoin: newValue.toString()
+        });
     }
 
     render() {
@@ -36,14 +57,16 @@ class CreateTransaction extends React.Component {
                 <Form.Item>
                     <Input
                         placeholder="Amount in Dollars"
-                        onChange={this.handleChange}
+                        onChange={this.handleNewDollarAmount}
+                        value={this.state.amountInDollars}
                         prefix={<Icon type="wallet" style={{ color: 'rgba(0,0,0,.25)' }} />} />
                 </Form.Item>
 
                 <Form.Item>
                     <Input
-                        placeholder="Amount in Bitcoin"
-                        onChange={this.handleChange}
+                        placeholder="Amount in Dollars"
+                        onChange={this.handleNewDollarAmount}
+                        value={this.state.amountInBitcoin}
                         prefix={<Icon type="wallet" style={{ color: 'rgba(0,0,0,.25)' }} />} />
                 </Form.Item>
             </Form>
