@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, Icon, Layout } from 'antd';
 import WalletsContent from './wallets.content.component';
 import StatsContent from './stats.content.component';
-import TransactionsContent from './transactions.content.component.jsx';
+import TransactionsContent from './payments.content.component.jsx';
 
 const { Header, Footer, Content } = Layout;
 

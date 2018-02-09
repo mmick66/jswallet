@@ -1,17 +1,23 @@
 import React from 'react';
 import { blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
+
+import TransactionDisplay from './transaction.display';
+
 import { Button, Table, Modal, message } from 'antd';
 const env = require('./env.json');
-class TransactionsContent extends React.Component {
+class PaymentsContent extends React.Component {
 
     constructor(props) {
         super(props);
         this.state = {
-            transactions: []
+            payments: [],
+            selectedTransaction: null,
+            modalOpenTransactionDetails: false,
         };
 
         this.showDetails = this.showDetails.bind(this);
+        this.handleOk = this.handleOk.bind(this);
 
         this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
     }
@@ -48,18 +54,19 @@ class TransactionsContent extends React.Component {
 
         this._transactions = data;
 
-        const allOutputs = [];
+        const payments = [];
         data.forEach((tx) => {
             tx.out.forEach((out, i) => {
-                allOutputs.push({
+                payments.push({
                     key: i,
                     address: out.addr,
                     coins: out.value / 100000000,
+                    hash: tx.hash,
                 });
             });
         });
 
-        this.setState({ outputs: allOutputs });
+        this.setState({ payments: payments });
     }
 
     get transactions() {
@@ -68,9 +75,22 @@ class TransactionsContent extends React.Component {
     }
 
     showDetails(record) {
-
+        const transaction = this.transactions.filter(t => t.hash === record.hash)[0];
+        if (!transaction) {
+            message.error('Cannot show details for this payment');
+            return;
+        }
+        this.setState({
+            selectedTransaction: transaction,
+            modalOpenTransactionDetails: true,
+        });
     }
 
+    handleOk() {
+        this.setState({
+            modalOpenTransactionDetails: false,
+        });
+    }
 
     render() {
 
@@ -90,13 +110,23 @@ class TransactionsContent extends React.Component {
         return (
             <div>
                 <Table columns={columns}
-                       dataSource={this.state.outputs}
+                       dataSource={this.state.payments}
                        onRow={onRowFactory}
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
+
+                <Modal
+                    title="Transaction Details"
+                    visible={this.state.modalOpenTransactionDetails}
+                    okText="Copy"
+                    footer={[
+                        <Button key="back" onClick={this.handleOk}>Ok</Button>,
+                    ]}>
+                    <TransactionDisplay content={this.state.selectedTransaction} />
+                </Modal>
             </div>
         );
     }
 }
 
-export default TransactionsContent;
+export default PaymentsContent;
