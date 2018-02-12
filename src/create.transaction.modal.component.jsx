@@ -6,7 +6,7 @@ import crypto from 'crypto';
 
 import { clipboard } from 'electron';
 
-const bs58 = require('bs58')
+const bs58 = require('bs58');
 const env = require('./env.json');
 
 class CreateTransactionForm extends React.Component {
@@ -24,6 +24,7 @@ class CreateTransactionForm extends React.Component {
 
         this.icons = {
             qrcode: <Icon type="qrcode" style={{ color: 'rgba(0,0,0,.25)' }} />,
+            unlock: <Icon type="unlock" style={{ color: 'rgba(0,0,0,.25)' }} />,
         };
 
         this.convertDollars = this.convertDollars.bind(this);
@@ -111,10 +112,20 @@ class CreateTransactionForm extends React.Component {
                             validator: this.convertBitcoin,
                         }],
                     })(
-                        <Input
-                            placeholder="Amount in Dollars"
-                            onChange={this.handleNewDollarAmount}
-                            prefix={'Ƀ'} />
+                        <Input placeholder="Amount in Dollars" prefix={'Ƀ'} />
+                    )}
+
+
+                </Form.Item>
+
+                <Form.Item>
+
+                    {getFieldDecorator('password', {
+                        rules: [{
+                            required: true, message: 'Please input a password',
+                        }],
+                    })(
+                        <Input type="password" placeholder="Unlock" prefix={this.icons.unlock} />
                     )}
 
 

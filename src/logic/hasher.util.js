@@ -20,19 +20,20 @@ class Hasher {
 
     static encrypt(key, password) {
         const cipher = crypto.createCipher(Hasher.Encryption, password);
-        const encrypted = cipher.update(key, Hasher.Encoding) + cipher.final(Hasher.Encoding);
-        return encrypted;
+        return cipher.update(key, Hasher.Encoding.In, Hasher.Encoding.Out) + cipher.final(Hasher.Encoding.Out);
     }
 
     static decrypt(key, password) {
         const cipher = crypto.createDecipher(Hasher.Encryption, password);
-        const decrypted = cipher.update(key, Hasher.Encoding) + cipher.final(Hasher.Encoding);
-        return decrypted;
+        return cipher.update(key, Hasher.Encoding.Out, Hasher.Encoding.In) + cipher.final(Hasher.Encoding.In);
     }
 }
 
 Hasher.Salt = 'jswallet';
 Hasher.Algorithm = 'sha512';
 Hasher.Encryption = 'aes-256-cbc';
-Hasher.Encoding = 'hex';
+Hasher.Encoding = {
+    In: 'utf8',
+    Out: 'hex'
+};
 export default Hasher;
