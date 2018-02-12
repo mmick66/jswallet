@@ -1,71 +1,123 @@
 import React from 'react';
 
-import bip39 from 'bip39';
-import bitcoin from 'bitcoinjs-lib';
-
 import { Input, Icon, Form } from 'antd';
 
 import crypto from 'crypto';
 
 import { clipboard } from 'electron';
 
+const bs58 = require('bs58')
 const env = require('./env.json');
 
-
-class CreateTransaction extends React.Component {
+class CreateTransactionForm extends React.Component {
 
     constructor(props) {
         super(props);
 
         this.rate = props.rate || 1.0;
 
-        console.log(this.rate);
 
         this.state = {
             amountInDollars: 0.0,
             amountInBitcoin: 0.0
         };
 
-        this.handleNewDollarAmount = this.handleNewDollarAmount.bind(this);
+        this.icons = {
+            qrcode: <Icon type="qrcode" style={{ color: 'rgba(0,0,0,.25)' }} />,
+        };
+
+        this.convertDollars = this.convertDollars.bind(this);
+        this.convertBitcoin = this.convertBitcoin.bind(this);
+        this.checkBitcoinAddress = this.checkBitcoinAddress.bind(this);
     }
 
-    handleNewDollarAmount(e) {
+    convertDollars(rule, value, callback) {
 
+        const form = this.props.form;
 
-        const inpValue = e.target.value;
-        const newValue = Number(inpValue);
-        if (Number.isNaN(newValue)) {
-            return;
+        if (Number.isNaN(Number(value))) {
+            callback('The value is not numeric');
+        } else {
+            form.setFieldsValue({
+                bitcoin: value * this.rate
+            });
+            callback();
         }
-        this.setState({
-            amountInDollars: inpValue,
-            amountInBitcoin: newValue * this.rate
-        });
+
+    }
+
+    convertBitcoin(rule, value, callback) {
+
+        const form = this.props.form;
+
+        if (Number.isNaN(Number(value))) {
+            callback('The value is not numeric');
+        } else {
+            form.setFieldsValue({
+                dollars: value / this.rate
+            });
+            callback();
+        }
+
+    }
+
+    checkBitcoinAddress(rule, value, callback) {
+        try {
+            bs58.decode(value);
+            callback();
+        } catch (e) {
+            callback(e);
+        }
     }
 
     render() {
+
+        const { getFieldDecorator } = this.props.form;
+
         return (
             <Form layout="vertical">
                 <Form.Item>
-                    <Input
-                        placeholder="Receiver's Address"
-                        prefix={<Icon type="qrcode" style={{ color: 'rgba(0,0,0,.25)' }} />} />
+                    {getFieldDecorator('address', {
+                        rules: [{
+                            required: true, message: 'Please input an address!',
+                        }, {
+                            validator: this.checkBitcoinAddress,
+                        }],
+                    })(
+                        <Input placeholder="Receiver's Address" prefix={this.icons.qrcode} />
+                    )}
+
                 </Form.Item>
 
                 <Form.Item>
-                    <Input
-                        placeholder="Amount in Dollars"
-                        onChange={this.handleNewDollarAmount}
-                        value={this.state.amountInDollars}
-                        prefix={'$'} />
+
+                    {getFieldDecorator('dollars', {
+                        rules: [{
+                            required: true, message: 'Please input an address!',
+                        }, {
+                            validator: this.convertDollars,
+                        }],
+                    })(
+                        <Input placeholder="Amount in Dollars" prefix={'$'} />
+                    )}
+
+
                 </Form.Item>
 
                 <Form.Item>
-                    <Input
-                        placeholder="Amount in Dollars"
-                        onChange={this.handleNewDollarAmount}
-                        value={this.state.amountInBitcoin}
-                        prefix={'Ƀ'} />
+
+                    {getFieldDecorator('bitcoin', {
+                        rules: [{
+                            validator: this.convertBitcoin,
+                        }],
+                    })(
+                        <Input
+                            placeholder="Amount in Dollars"
+                            onChange={this.handleNewDollarAmount}
+                            prefix={'Ƀ'} />
+                    )}
+
+
                 </Form.Item>
             </Form>
 
@@ -73,5 +125,4 @@ class CreateTransaction extends React.Component {
     }
 
 }
-
-export default CreateTransaction;
+export default Form.create()(CreateTransactionForm);
