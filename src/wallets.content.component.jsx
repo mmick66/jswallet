@@ -4,7 +4,7 @@ import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 
 import { Button, Table, Modal, message } from 'antd';
-import { exchange, blockexplorer } from 'blockchain.info';
+import { exchange, blockexplorer, pushtx } from 'blockchain.info';
 import Datastore from 'nedb';
 
 
@@ -15,7 +15,11 @@ import CreateTransaction from './create.transaction.modal.component';
 import Hasher from './logic/hasher.util';
 
 const env = require('./env.json');
+
 const network = env.network === 'testnet' ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
+const explorer = env.network === 'testnet' ? blockexplorer.usingNetwork(3) : blockexplorer;
+
+const SatoshisInBitcoin = 100000000;
 
 class WalletsContent extends React.Component {
 
@@ -26,7 +30,7 @@ class WalletsContent extends React.Component {
             modalOpenCreate: false,
             modalOpenSend: false,
             price: 1.0,
-            coins: 0.0,
+            total: 0.0,
             wallets: [],
             creatingKeys: false,
             sendingPayment: false,
@@ -42,7 +46,6 @@ class WalletsContent extends React.Component {
     }
 
     loadWallets() {
-
         return new Promise((res, rej) => {
             this.db.find({ active: true }, (err, docs) => {
                 if (err) rej(err);
@@ -66,7 +69,7 @@ class WalletsContent extends React.Component {
                 wallets: wallets
             });
             this.loadAllUTXOs();
-        }).catch(e => {
+        }).catch((e) => {
             console.log(e);
             message.error('Could not load wallets from database');
         });
@@ -150,15 +153,14 @@ class WalletsContent extends React.Component {
                     return;
                 }
 
-                const tx = new bitcoin.TransactionBuilder(network);
+                const txb = new bitcoin.TransactionBuilder(network);
 
-                let satoshisToSend = values.bitcoin * 100000000;
+                const satoshisToSend = values.bitcoin * 100000000;
 
                 let satoshisCurrent = 0;
                 for (const utx of sw.utxos) {
 
-
-                    tx.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
+                    txb.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
 
                     satoshisCurrent += utx.value;
                     if (satoshisCurrent >= satoshisToSend) break;
@@ -166,17 +168,19 @@ class WalletsContent extends React.Component {
 
                 const change = satoshisCurrent - satoshisToSend;
 
-                tx.addOutput(values.address, satoshisCurrent);
+                txb.addOutput(values.address, satoshisCurrent);
 
-                if (change > 0) {
-                    tx.addOutput(sw.address, change);
-                }
+                if (change) txb.addOutput(sw.address, change);
 
                 const encrypted = sw.encwif;
                 const decrypted = Hasher.decrypt(encrypted, hash);
                 const key = bitcoin.ECPair.fromWIF(decrypted, network);
 
-                tx.sign(0, key);
+                txb.sign(0, key);
+
+                const raw = txb.build().toHex();
+
+                pushtx(raw);
 
 
             }).catch((e) => {
@@ -184,7 +188,6 @@ class WalletsContent extends React.Component {
             });
 
         });
-
 
     }
 
@@ -211,42 +214,39 @@ class WalletsContent extends React.Component {
         this.form = null;
     }
 
-    loadAllUTXOs() {
+    updateWallet(wallet, index, data) {
 
-        const explorer = env.network === 'testnet' ? blockexplorer.usingNetwork(3) : blockexplorer;
+        const w = wallet;
+        w.utxos = data.unspent_outputs;
+        w.coins = data.unspent_outputs.reduce((a, c) => a + c.value, 0) / SatoshisInBitcoin;
 
-        const walletsToUpdate = this.state.wallets.map(w => Object.assign(w, { updating: true }));
+        this.state.wallets.splice(index, 1, w);
 
         this.setState({
-            wallets: walletsToUpdate,
+            wallets: this.state.wallets,
+            total: this.state.total + w.coins,
         });
+    }
 
-        const promises = walletsToUpdate.map(w => explorer.getUnspentOutputs(w.address));
+    loadAllUTXOs() {
 
-        Promise.all(promises).then((all) => {
+        this.state.wallets.forEach((wallet, i) => {
 
-            all.forEach((obj, i) => {
-                walletsToUpdate[i].utxos = obj.unspent_outputs;
-                walletsToUpdate[i].coins = obj.unspent_outputs.reduce((a, c) => a + c.value, 0) / 100000000;
+            explorer.getUnspentOutputs(wallet.address).then((result) => {
+
+                this.updateWallet(wallet, i, result);
+
+            }).catch((e) => {
+
+                // an empty result is throwing an error... go figure
+                if (e.toString() === 'No free outputs to spend') {
+                    console.log('No free outputs for ' + wallet.address);
+                } else {
+                    console.log(e);
+                    message.error('Could not retrieve data for ' + wallet.address);
+                }
             });
-
-            const coins = walletsToUpdate.map(w => w.coins).reduce((acc, curr) => acc + curr, 0);
-
-            this.setState({
-                wallets: walletsToUpdate,
-                coins: coins,
-            });
-
-        }).catch((e) => {
-
-            // an empty result is throwing an error... go figure
-            if (e.toString() === 'No free outputs to spend') {
-                message.warning('Your wallets are empty.');
-            } else {
-                message.error('Could not retrieve wallet data.');
-            }
         });
-
 
     }
 
@@ -330,7 +330,7 @@ class WalletsContent extends React.Component {
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
-                    <h3>Total: {`$${(this.state.coins * this.state.price).toFixed(2)}` }</h3>
+                    <h3>Total: {`$${(this.state.total * this.state.price).toFixed(2)}` }</h3>
                 </div>
             </div>
         );
