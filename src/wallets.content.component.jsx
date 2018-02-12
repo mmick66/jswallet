@@ -167,9 +167,10 @@ class WalletsContent extends React.Component {
                 const change = satoshisCurrent - satoshisToSend;
 
                 tx.addOutput(values.address, satoshisCurrent);
-                // if (change > 0) {
-                //     tx.addOutput(sw.address, change);
-                // }
+
+                if (change > 0) {
+                    tx.addOutput(sw.address, change);
+                }
 
                 const encrypted = sw.encwif;
                 const decrypted = Hasher.decrypt(encrypted, hash);
@@ -177,7 +178,6 @@ class WalletsContent extends React.Component {
 
                 tx.sign(0, key);
 
-                console.log(tx.build().toHex());
 
             }).catch((e) => {
                 console.log(e);
