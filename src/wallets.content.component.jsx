@@ -1,11 +1,9 @@
 import React from 'react';
 
-import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 
 import { Button, Table, Modal, message } from 'antd';
 import { exchange, blockexplorer, pushtx } from 'blockchain.info';
-import Datastore from 'nedb';
 
 import { clipboard } from 'electron';
 
@@ -104,9 +102,14 @@ class WalletsContent extends React.Component {
         });
 
         wallet.save().then(() => {
-            message.success('This wallet was saved to the local db!');
+            Modal.success({
+                title: Constants.Messages.Wallet.Created,
+                content: 'Save the following sequence to restore:\n' + mnemonic,
+            });
         }).catch(() => {
-            message.warning('The wallet could not saved to the local db!');
+            Modal.error({
+                title: Constants.Messages.Wallet.Failed,
+            });
         });
     }
 
@@ -271,6 +274,7 @@ class WalletsContent extends React.Component {
                         ref={form => (this.form = form)}
                         handleCreate={this.handleCreate} />
                 </Modal>
+
 
                 <Table columns={columns}
                        dataSource={this.state.wallets}

@@ -5,7 +5,6 @@ import Constants from './constants';
 import { pushtx } from 'blockchain.info';
 import Datastore from 'nedb';
 
-
 class Wallet {
 
     constructor(info) {
@@ -44,7 +43,7 @@ class Wallet {
     }
 
     get key() {
-        return this.__address;
+        return this.address;
     }
 
     get wif() {
@@ -132,7 +131,6 @@ class Wallet {
     static load(q = {}) {
         return new Promise((res, rej) => {
             Wallet.Db.find(q, (err, docs) => {
-                console.log(docs);
                 if (err) rej(err);
                 const wallets = docs.map(doc => new Wallet(doc));
                 res(wallets);

@@ -10,4 +10,10 @@ export default {
     ReturnValues: {
         TransactionSubmitted: 'Transaction Submitted'
     },
+    Messages: {
+        Wallet: {
+            Created: 'Your wallet has been created!',
+            Failed: 'A wallet could not be created at this moment',
+        }
+    }
 };
