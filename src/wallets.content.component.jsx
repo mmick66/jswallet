@@ -13,6 +13,7 @@ import Constants from './logic/constants';
 import CreateForm from './create.form.modal.component';
 import CreateTransaction from './create.transaction.modal.component';
 import Hasher from './logic/hasher.util';
+import Wallet from './logic/wallet.class';
 
 const env = require('./env.json');
 
@@ -40,19 +41,7 @@ class WalletsContent extends React.Component {
         this.handleCancel = this.handleCancel.bind(this);
         this.loadAllUTXOs = this.loadAllUTXOs.bind(this);
 
-        this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
     }
-
-    loadWallets() {
-        return new Promise((res, rej) => {
-            this.db.find({ active: true }, (err, docs) => {
-                if (err) rej(err);
-                const wallets = docs.map(doc => Object.assign(doc, { utxos: [] }));
-                res(wallets);
-            });
-        });
-    }
-
 
     componentDidMount() {
 
@@ -70,11 +59,9 @@ class WalletsContent extends React.Component {
             });
         });
 
-        this.loadWallets().then((wallets) => {
-            this.setState({
-                wallets: wallets
-            });
-            this.loadAllUTXOs();
+        Wallet.load().then((wallets) => {
+            this.setState({ wallets: wallets });
+            this.loadAllUTXOs(wallets);
         }).catch((e) => {
             console.log(e);
             message.error('Could not load wallets from database');
@@ -106,30 +93,21 @@ class WalletsContent extends React.Component {
 
     createWallet(name, hash) {
 
-        const mnemonic = bip39.generateMnemonic();
+        const mnemonic = Wallet.generate();
 
-        const seed = bip39.mnemonicToSeed(mnemonic);
-        const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks[env.network]);
+        const wallet = Wallet.create(name, mnemonic);
 
-        const derived = master.derivePath("m/44'/0'/0'/0/0");
-        const address = derived.getAddress();
-        const wif = derived.keyPair.toWIF();
+        wallet.encrypt(hash);
 
-        const encrypted = Hasher.encrypt(wif, hash);
+        this.setState({
+            wallets: this.state.wallets.concat([wallet])
+        });
 
-        const wallet = {
-            key: address,
-            name: name,
-            address: address,
-            coins: 0,
-            encwif: encrypted,
-            pass: hash,
-            active: true,
-            utxos: [],
-        };
-
-        this.addWallet(wallet);
-
+        wallet.save().then(() => {
+            message.success('This wallet was saved to the local db!');
+        }).catch(() => {
+            message.warning('The wallet could not saved to the local db!');
+        });
     }
 
     handleSendit() {
@@ -199,21 +177,6 @@ class WalletsContent extends React.Component {
 
     }
 
-    addWallet(wallet) {
-
-        this.setState({
-            wallets: this.state.wallets.concat([wallet])
-        });
-
-        this.db.insert(wallet, (err) => {
-            if (err) {
-                message.warning('The wallet could not saved to the local db!');
-            } else {
-                message.success('This wallet was saved to the local db!');
-            }
-        });
-    }
-
     handleCancel() {
         this.setState({
             modalOpenCreate: false,
@@ -223,9 +186,9 @@ class WalletsContent extends React.Component {
     }
 
 
-    loadAllUTXOs() {
+    loadAllUTXOs(wallets) {
 
-        this.state.wallets.forEach((wallet, i) => {
+        wallets.forEach((wallet, i) => {
 
             explorer.getUnspentOutputs(wallet.address).then((result) => {
 

@@ -3,6 +3,8 @@ import bitcoin from 'bitcoinjs-lib';
 import crypto from 'crypto';
 import Constants from './constants';
 import { pushtx } from 'blockchain.info';
+import Datastore from 'nedb';
+
 
 class Wallet {
 
@@ -18,7 +20,6 @@ class Wallet {
         this.__coins = 0;
         this.__utxos = [];
 
-        this.active = true;
     }
 
     set utxos(value) {
@@ -39,6 +40,10 @@ class Wallet {
     }
 
     get address() {
+        return this.__address;
+    }
+
+    get key() {
         return this.__address;
     }
 
@@ -124,6 +129,26 @@ class Wallet {
 
     }
 
+    static load(q = {}) {
+        return new Promise((res, rej) => {
+            Wallet.Db.find(q, (err, docs) => {
+                console.log(docs);
+                if (err) rej(err);
+                const wallets = docs.map(doc => new Wallet(doc));
+                res(wallets);
+            });
+        });
+    }
+
+    save() {
+        return new Promise((res, rej) => {
+            Wallet.Db.insert(this.toObject(), (err) => {
+                if (err) rej(err);
+                res();
+            });
+        });
+    }
+
     toObject() {
 
         const obj = {
@@ -133,7 +158,7 @@ class Wallet {
             network: this.network,
         };
 
-        if (this.__password) Object.assign(obj, { password: this.__password });
+        if (this.__password) obj.password = this.__password;
 
         return obj;
     }
@@ -145,6 +170,8 @@ Wallet.Defaults = {
     Encryption: 'aes-256-cbc',
     Path: "m/44'/0'/0'/0/0",
 };
+
+Wallet.Db = new Datastore({ filename: './db/wallets.db', autoload: true });
 
 
 export default Wallet;
