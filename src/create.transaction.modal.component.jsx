@@ -2,12 +2,11 @@ import React from 'react';
 
 import { Input, Icon, Form } from 'antd';
 
-import crypto from 'crypto';
-
-import { clipboard } from 'electron';
+import Constants from './logic/constants';
 
 const bs58 = require('bs58');
-const env = require('./env.json');
+
+const isValidNumber = value => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
 class CreateTransactionForm extends React.Component {
 
@@ -32,15 +31,17 @@ class CreateTransactionForm extends React.Component {
         this.checkBitcoinAddress = this.checkBitcoinAddress.bind(this);
     }
 
+
+
     convertDollars(rule, value, callback) {
 
         const form = this.props.form;
 
-        if (Number.isNaN(Number(value))) {
+        if (!isValidNumber(value)) {
             callback('The value is not numeric');
         } else {
             form.setFieldsValue({
-                bitcoin: value * this.rate
+                bitcoin: (value * this.rate).toFixed(Constants.Bitcoin.Decimals),
             });
             callback();
         }
@@ -51,7 +52,7 @@ class CreateTransactionForm extends React.Component {
 
         const form = this.props.form;
 
-        if (Number.isNaN(Number(value))) {
+        if (!isValidNumber(value)) {
             callback('The value is not numeric');
         } else {
             form.setFieldsValue({
@@ -71,9 +72,11 @@ class CreateTransactionForm extends React.Component {
         }
     }
 
+
     render() {
 
         const { getFieldDecorator } = this.props.form;
+
 
         return (
             <Form layout="vertical">
@@ -102,7 +105,6 @@ class CreateTransactionForm extends React.Component {
                         <Input placeholder="Amount in Dollars" prefix={'$'} />
                     )}
 
-
                 </Form.Item>
 
                 <Form.Item>
@@ -112,7 +114,8 @@ class CreateTransactionForm extends React.Component {
                             validator: this.convertBitcoin,
                         }],
                     })(
-                        <Input placeholder="Amount in Dollars" prefix={'Ƀ'} />
+                        <Input placeholder="Amount in Dollars"
+                               prefix={'Ƀ'} />
                     )}
 
 

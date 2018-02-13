@@ -7,19 +7,17 @@ import { Button, Table, Modal, message } from 'antd';
 import { exchange, blockexplorer, pushtx } from 'blockchain.info';
 import Datastore from 'nedb';
 
-
 import { clipboard } from 'electron';
 
+import Constants from './logic/constants';
 import CreateForm from './create.form.modal.component';
 import CreateTransaction from './create.transaction.modal.component';
 import Hasher from './logic/hasher.util';
 
 const env = require('./env.json');
 
-const network = env.network === 'testnet' ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
-const explorer = env.network === 'testnet' ? blockexplorer.usingNetwork(3) : blockexplorer;
-
-const SatoshisInBitcoin = 100000000;
+const network = env.network === Constants.Bitcoin.Networks.Testnet ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
+const explorer = env.network === Constants.Bitcoin.Networks.Testnet ? blockexplorer.usingNetwork(3) : blockexplorer;
 
 class WalletsContent extends React.Component {
 
@@ -64,6 +62,14 @@ class WalletsContent extends React.Component {
             console.log(e);
         });
 
+        explorer.getLatestBlock().then((block) => {
+            explorer.getBlock(block.hash).then((block) => {
+                this.fee = block.fee;
+            }).catch((e) => {
+                console.log('Could not get block ', e);
+            });
+        });
+
         this.loadWallets().then((wallets) => {
             this.setState({
                 wallets: wallets
@@ -81,22 +87,15 @@ class WalletsContent extends React.Component {
 
             if (err) return;
 
-            this.setState({
-                creatingKeys: true
-            });
+            this.setState({ creatingKeys: true });
 
             Hasher.hash(values.password).then((hash) => {
-
                 if (err) {
                     message.error('Could not hash the password');
                     return;
                 }
-
                 this.form.resetFields();
-
-                this.setState({
-                    modalOpenCreate: false,
-                });
+                this.setState({ modalOpenCreate: false });
 
                 this.createWallet(values.name, hash);
             });
@@ -139,36 +138,33 @@ class WalletsContent extends React.Component {
 
             if (err) return;
 
-            this.setState({
-                modalOpenSend: false,
-            });
+            this.setState({ modalOpenSend: false });
 
             const sw = this.state.sourceWallet;
 
             Hasher.hash(values.password).then((hash) => {
 
                 if (hash !== sw.pass) {
-
-                    message.error('Wrong pass');
+                    message.error('Wrong password.');
                     return;
                 }
 
                 const txb = new bitcoin.TransactionBuilder(network);
 
-                const satoshisToSend = values.bitcoin * 100000000;
+                const satoshisToSend = Number(values.bitcoin).toFixed(Constants.Bitcoin.Decimals) * Constants.Bitcoin.Satoshis;
 
-                let satoshisCurrent = 0;
+                let inputAmount = 0;
                 for (const utx of sw.utxos) {
 
                     txb.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
 
-                    satoshisCurrent += utx.value;
-                    if (satoshisCurrent >= satoshisToSend) break;
+                    inputAmount += utx.value;
+                    if (inputAmount >= (satoshisToSend + this.fee)) break;
                 }
 
-                const change = satoshisCurrent - satoshisToSend;
+                const change = inputAmount - (satoshisToSend + this.fee);
 
-                txb.addOutput(values.address, satoshisCurrent);
+                txb.addOutput(values.address, satoshisToSend);
 
                 if (change) txb.addOutput(sw.address, change);
 
@@ -180,11 +176,23 @@ class WalletsContent extends React.Component {
 
                 const raw = txb.build().toHex();
 
-                pushtx(raw);
+                const api = env.network === Constants.Bitcoin.Networks.Testnet ? pushtx.usingNetwork(3) : pushtx;
+
+                api.pushtx(raw).then((r) => {
+                    if (r === Constants.ReturnValues.TransactionSubmitted) {
+                        message.success('Transaction Send!');
+                        this.loadAllUTXOs();
+
+                    } else {
+                        message.error('Transaction could not be sent');
+                    }
+                    console.log(r);
+                });
 
 
             }).catch((e) => {
                 console.log(e);
+                message.error(e);
             });
 
         });
@@ -214,19 +222,6 @@ class WalletsContent extends React.Component {
         this.form = null;
     }
 
-    updateWallet(wallet, index, data) {
-
-        const w = wallet;
-        w.utxos = data.unspent_outputs;
-        w.coins = data.unspent_outputs.reduce((a, c) => a + c.value, 0) / SatoshisInBitcoin;
-
-        this.state.wallets.splice(index, 1, w);
-
-        this.setState({
-            wallets: this.state.wallets,
-            total: this.state.total + w.coins,
-        });
-    }
 
     loadAllUTXOs() {
 
@@ -234,7 +229,11 @@ class WalletsContent extends React.Component {
 
             explorer.getUnspentOutputs(wallet.address).then((result) => {
 
-                this.updateWallet(wallet, i, result);
+                wallet.utxos = result.unspent_outputs;
+                wallet.coins = result.unspent_outputs.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis;
+
+                this.state.wallets.splice(i, 1, wallet);
+                this.setState({ wallets: this.state.wallets, total: this.state.total + wallet.coins });
 
             }).catch((e) => {
 

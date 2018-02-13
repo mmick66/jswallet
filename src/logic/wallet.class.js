@@ -1,6 +1,8 @@
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 import crypto from 'crypto';
+import Constants from './constants';
+import { pushtx } from 'blockchain.info';
 
 class Wallet {
 
@@ -8,14 +10,28 @@ class Wallet {
         this.__name = info.name;
         this.__address = info.address;
         this.__wif = info.wif;
-        this.__network = bitcoin.networks[info.network];
+        this.__network = info.network;
 
         this.__password = info.password || undefined;
 
         // public
-        this.coins = 0;
-        this.utxos = [];
+        this.__coins = 0;
+        this.__utxos = [];
+
         this.active = true;
+    }
+
+    set utxos(value) {
+        this.__utxos = value;
+        this.__coins = value.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis;
+    }
+
+    get utxos() {
+        return this.__utxos;
+    }
+
+    get coins() {
+        return this.__coins;
     }
 
     get name() {
@@ -34,7 +50,6 @@ class Wallet {
         return this.__network;
     }
 
-
     encrypt(password) {
         if (this.__password) throw new Error('Cannot re-encrypt an encrypted key');
         this.__password = password;
@@ -42,11 +57,45 @@ class Wallet {
         return cipher.update(this.__wif, 'utf8', 'hex') + cipher.final('hex');
     }
 
-    decrypt(password) {
+    readDecrypted(password) {
         if (!this.__password) throw new Error('Cannot de-encrypt an key that was not encrypted');
-        this.__password = null;
+        if (!password || (password !== this.__password)) throw new Error('Passwords do not match');
         const cipher = crypto.createDecipher(Wallet.Defaults.Encryption, password);
         return cipher.update(this.__wif, 'hex', 'utf8') + cipher.final('utf8');
+    }
+
+
+    send(satoshis, address, password) {
+
+        const network = bitcoin.networks[this.network];
+
+        const txb = new bitcoin.TransactionBuilder(network);
+
+        let current = 0;
+        for (const utx of this.utxos) {
+
+            txb.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
+
+            current += utx.value;
+            if (current >= satoshis) break;
+        }
+
+        const change = current - satoshis;
+
+        txb.addOutput(address, current);
+
+        if (change) txb.addOutput(this.address, change);
+
+        const wif = this.__password ? this.readDecrypted(password) : this.wif;
+        const key = bitcoin.ECPair.fromWIF(wif, network);
+
+        txb.sign(0, key);
+
+        const raw = txb.build().toHex();
+
+        const api = this.network === Constants.Bitcoin.Networks.Testnet ? pushtx.usingNetwork(3) : pushtx;
+
+        return api.pushtx(raw);
     }
 
 
@@ -62,7 +111,7 @@ class Wallet {
         const seed = bip39.mnemonicToSeed();
 
         const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks[network]);
-        const derived = master.derivePath("m/44'/0'/0'/0/0");
+        const derived = master.derivePath(Wallet.Defaults.Path);
         const address = derived.getAddress();
         const wif = derived.keyPair.toWIF();
 
@@ -94,6 +143,7 @@ class Wallet {
 Wallet.Defaults = {
     Network: 'testnet',
     Encryption: 'aes-256-cbc',
+    Path: "m/44'/0'/0'/0/0",
 };
 
 
