@@ -30,7 +30,6 @@ class WalletsContent extends React.Component {
         this.handleCreate = this.handleCreate.bind(this);
         this.handleSendit = this.handleSendit.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
-        this.loadAllUTXOs = this.loadAllUTXOs.bind(this);
 
     }
 
@@ -49,9 +48,16 @@ class WalletsContent extends React.Component {
         });
 
 
-        Wallet.load().then((wallets) => {
+        Wallet.all().then((wallets) => {
+
+            wallets.forEach((w,i) => {
+                w.update().then(() => {
+                    this.forceUpdate();
+                });
+            });
+
             this.setState({ wallets: wallets });
-            return this.loadAllUTXOs(wallets);
+
         }, (e) => {
             console.log(e);
             message.error('Could not load wallets from database');
@@ -143,32 +149,6 @@ class WalletsContent extends React.Component {
         this.form = null;
     }
 
-
-    loadAllUTXOs(wallets) {
-
-        wallets.forEach((wallet, i) => {
-
-            bnet.api.getUnspentOutputs(wallet.address).then((result) => {
-
-                wallet.utxos = result.utxos;
-                wallet.coins = result.coins;
-
-                this.state.wallets.splice(i, 1, wallet);
-                this.setState({ wallets: this.state.wallets, total: this.state.total + wallet.coins });
-
-            }).catch((e) => {
-
-                // an empty result is throwing an error... go figure
-                if (e.toString() === 'No free outputs to spend') {
-                    console.log('No free outputs for ' + wallet.address);
-                } else {
-                    console.log(e);
-                    message.error('Could not retrieve data for ' + wallet.address);
-                }
-            });
-        });
-
-    }
 
     render() {
 

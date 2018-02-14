@@ -12,7 +12,7 @@
     "object-shorthand": 0,
     "no-shadow": 0,
     "arrow-body-style": ["warn", "never"],
-    "no-underscore-dangle": ["error", { "allowAfterThis": true }],
+    "no-underscore-dangle": ["error", { "allowAfterThis": true, "allow": ["__store"] }],
     "no-trailing-spaces": 0,
     "max-len": ["warn", { "code": 180 }],
     "no-multiple-empty-lines": 0,

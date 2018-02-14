@@ -8,7 +8,8 @@ export default {
         }
     },
     ReturnValues: {
-        TransactionSubmitted: 'Transaction Submitted'
+        TransactionSubmitted: 'Transaction Submitted',
+        NoFreeOutputs: 'No free outputs to spend',
     },
     Messages: {
         Wallet: {

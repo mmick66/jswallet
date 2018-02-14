@@ -2,15 +2,17 @@ import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 import crypto from 'crypto';
 
-import Datastore from 'nedb';
+import EventEmitter from 'events';
 
 import Constants from './constants';
 
 import bnet from './network';
+import Database from './database';
 
-class Wallet {
+class Wallet extends EventEmitter {
 
     constructor(info) {
+        super();
         this.__name = info.name;
         this.__address = info.address;
         this.__wif = info.wif;
@@ -21,6 +23,8 @@ class Wallet {
         // public
         this.__coins = 0;
         this.__utxos = [];
+
+        this.update();
 
     }
 
@@ -107,6 +111,20 @@ class Wallet {
     }
 
 
+    static get store() {
+        if (!Wallet.__store) {
+            Wallet.__store = new Database('wallets');
+        }
+        return Wallet.__store;
+    }
+
+    static all() {
+        return Wallet.store.load({ network: bnet.name }).then((docs) => {
+            return docs.map(doc => new Wallet(doc));
+        });
+    }
+
+
     static generate() {
         return bip39.generateMnemonic();
     }
@@ -130,27 +148,22 @@ class Wallet {
 
     }
 
-    static load(q = {}) {
+    update() {
 
-        Object.assign(q, { network: bnet.name }); // only load wallets of the current network
-
-        return new Promise((res, rej) => {
-            Wallet.Db.find(q, (err, docs) => {
-                if (err) rej(err);
-                const wallets = docs.map(doc => new Wallet(doc));
-                res(wallets);
-            });
+        return bnet.api.getUnspentOutputs(this.address).then((result) => {
+            this.utxos = result.utxos;
+            return true;
+        }).catch((e) => {
+            if (e.toString() !== Constants.ReturnValues.NoFreeOutputs) {
+                throw new Error(e);
+            }
         });
     }
 
     save() {
-        return new Promise((res, rej) => {
-            Wallet.Db.insert(this.toObject(), (err) => {
-                if (err) rej(err);
-                res();
-            });
-        });
+        return Wallet.Db.save(this.toObject());
     }
+
 
     toObject() {
 
@@ -173,7 +186,8 @@ Wallet.Defaults = {
     Path: "m/44'/0'/0'/0/0",
 };
 
-Wallet.Db = new Datastore({ filename: './db/wallets.db', autoload: true });
+
+
 
 
 export default Wallet;
