@@ -1,9 +1,12 @@
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
 import crypto from 'crypto';
-import Constants from './constants';
-import { pushtx } from 'blockchain.info';
+
 import Datastore from 'nedb';
+
+import Constants from './constants';
+
+import bnet from './network';
 
 class Wallet {
 
@@ -69,9 +72,12 @@ class Wallet {
     }
 
 
-    send(satoshis, address, password) {
+    send(btc, address, password) {
 
-        const network = bitcoin.networks[this.network];
+
+        const satoshis = Number(btc).toFixed(Constants.Bitcoin.Decimals) * Constants.Bitcoin.Satoshis;
+
+        const network = bnet.current;
 
         const txb = new bitcoin.TransactionBuilder(network);
 
@@ -97,9 +103,7 @@ class Wallet {
 
         const raw = txb.build().toHex();
 
-        const api = this.network === Constants.Bitcoin.Networks.Testnet ? pushtx.usingNetwork(3) : pushtx;
-
-        return api.pushtx(raw);
+        return bnet.api.broadcast(raw);
     }
 
 
@@ -108,13 +112,11 @@ class Wallet {
     }
 
 
-    static create(name, mnemonic, _network) {
+    static create(name, mnemonic) {
 
-        const network = _network || Wallet.Defaults.Network;
+        const seed = bip39.mnemonicToSeed(mnemonic);
 
-        const seed = bip39.mnemonicToSeed();
-
-        const master = bitcoin.HDNode.fromSeedBuffer(seed, bitcoin.networks[network]);
+        const master = bitcoin.HDNode.fromSeedBuffer(seed, bnet.current);
         const derived = master.derivePath(Wallet.Defaults.Path);
         const address = derived.getAddress();
         const wif = derived.keyPair.toWIF();
@@ -123,7 +125,7 @@ class Wallet {
             name: name,
             address: address,
             wif: wif,
-            network: network,
+            network: bnet.name,
         });
 
     }
@@ -164,7 +166,6 @@ class Wallet {
 }
 
 Wallet.Defaults = {
-    Network: 'testnet',
     Encryption: 'aes-256-cbc',
     Path: "m/44'/0'/0'/0/0",
 };

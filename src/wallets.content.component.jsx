@@ -1,9 +1,6 @@
 import React from 'react';
 
-import bitcoin from 'bitcoinjs-lib';
-
 import { Button, Table, Modal, message } from 'antd';
-import { exchange, blockexplorer, pushtx } from 'blockchain.info';
 
 import { clipboard } from 'electron';
 
@@ -12,11 +9,7 @@ import CreateForm from './create.form.modal.component';
 import CreateTransaction from './create.transaction.modal.component';
 import Hasher from './logic/hasher.util';
 import Wallet from './logic/wallet.class';
-
-const env = require('./env.json');
-
-const network = env.network === Constants.Bitcoin.Networks.Testnet ? bitcoin.networks.testnet : bitcoin.networks.bitcoin;
-const explorer = env.network === Constants.Bitcoin.Networks.Testnet ? blockexplorer.usingNetwork(3) : blockexplorer;
+import bnet from './logic/network';
 
 class WalletsContent extends React.Component {
 
@@ -43,19 +36,18 @@ class WalletsContent extends React.Component {
 
     componentDidMount() {
 
-        exchange.getTicker({ currency: 'USD' }).then((r) => {
+        bnet.api.getPrice('USD').then((r) => {
             this.setState({ price: r.sell });
         }).catch((e) => {
             console.log(e);
         });
 
-        explorer.getLatestBlock().then((block) => {
-            explorer.getBlock(block.hash).then((block) => {
-                this.fee = block.fee;
-            }).catch((e) => {
-                console.log('Could not get block ', e);
-            });
+        bnet.api.getFee().then((fee) => {
+            this.fee = fee;
+        }).catch((e) => {
+            console.log('Could not get fee ', e);
         });
+
 
         Wallet.load().then((wallets) => {
             this.setState({ wallets: wallets });
@@ -75,43 +67,46 @@ class WalletsContent extends React.Component {
             this.setState({ creatingKeys: true });
 
             Hasher.hash(values.password).then((hash) => {
+
                 if (err) {
                     message.error('Could not hash the password');
                     return;
                 }
+
                 this.form.resetFields();
                 this.setState({ modalOpenCreate: false });
 
-                this.createWallet(values.name, hash);
+                const mnemonic = Wallet.generate();
+
+                const wallet = Wallet.create(values.name, mnemonic);
+
+                wallet.encrypt(hash);
+
+                this.setState({
+                    wallets: this.state.wallets.concat([wallet])
+                });
+
+                wallet.save().then(() => {
+
+                    message.success(Constants.Messages.Wallet.Created);
+
+                    setTimeout(() => {
+                        Modal.success({
+                            title: Constants.Messages.Wallet.Mnemonic,
+                            content: 'Save the following sequence to restore:\n' + mnemonic,
+                        });
+                    }, 2000);
+
+                }).catch(() => {
+                    Modal.error({
+                        title: Constants.Messages.Wallet.Failed,
+                    });
+                });
             });
 
         });
     }
 
-
-    createWallet(name, hash) {
-
-        const mnemonic = Wallet.generate();
-
-        const wallet = Wallet.create(name, mnemonic);
-
-        wallet.encrypt(hash);
-
-        this.setState({
-            wallets: this.state.wallets.concat([wallet])
-        });
-
-        wallet.save().then(() => {
-            Modal.success({
-                title: Constants.Messages.Wallet.Created,
-                content: 'Save the following sequence to restore:\n' + mnemonic,
-            });
-        }).catch(() => {
-            Modal.error({
-                title: Constants.Messages.Wallet.Failed,
-            });
-        });
-    }
 
     handleSendit() {
 
@@ -121,55 +116,14 @@ class WalletsContent extends React.Component {
 
             this.setState({ modalOpenSend: false });
 
-            const sw = this.state.sourceWallet;
-
             Hasher.hash(values.password).then((hash) => {
 
-                if (hash !== sw.pass) {
+
+                if (hash === this.state.sourceWallet.pass) {
+                    this.state.sourceWallet.send(values.bitcoin, values.address, hash);
+                } else {
                     message.error('Wrong password.');
-                    return;
                 }
-
-                const txb = new bitcoin.TransactionBuilder(network);
-
-                const satoshisToSend = Number(values.bitcoin).toFixed(Constants.Bitcoin.Decimals) * Constants.Bitcoin.Satoshis;
-
-                let inputAmount = 0;
-                for (const utx of sw.utxos) {
-
-                    txb.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
-
-                    inputAmount += utx.value;
-                    if (inputAmount >= (satoshisToSend + this.fee)) break;
-                }
-
-                const change = inputAmount - (satoshisToSend + this.fee);
-
-                txb.addOutput(values.address, satoshisToSend);
-
-                if (change) txb.addOutput(sw.address, change);
-
-                const encrypted = sw.encwif;
-                const decrypted = Hasher.decrypt(encrypted, hash);
-                const key = bitcoin.ECPair.fromWIF(decrypted, network);
-
-                txb.sign(0, key);
-
-                const raw = txb.build().toHex();
-
-                const api = env.network === Constants.Bitcoin.Networks.Testnet ? pushtx.usingNetwork(3) : pushtx;
-
-                api.pushtx(raw).then((r) => {
-                    if (r === Constants.ReturnValues.TransactionSubmitted) {
-                        message.success('Transaction Send!');
-                        this.loadAllUTXOs();
-
-                    } else {
-                        message.error('Transaction could not be sent');
-                    }
-                    console.log(r);
-                });
-
 
             }).catch((e) => {
                 console.log(e);
@@ -193,10 +147,10 @@ class WalletsContent extends React.Component {
 
         wallets.forEach((wallet, i) => {
 
-            explorer.getUnspentOutputs(wallet.address).then((result) => {
+            bnet.api.getUnspentOutputs(wallet.address).then((result) => {
 
-                wallet.utxos = result.unspent_outputs;
-                wallet.coins = result.unspent_outputs.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis;
+                wallet.utxos = result.utxos;
+                wallet.coins = result.coins;
 
                 this.state.wallets.splice(i, 1, wallet);
                 this.setState({ wallets: this.state.wallets, total: this.state.total + wallet.coins });

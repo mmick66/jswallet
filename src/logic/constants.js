@@ -12,7 +12,8 @@ export default {
     },
     Messages: {
         Wallet: {
-            Created: 'Your wallet has been created!',
+            Created: 'Your wallet has been created and saved!',
+            Mnemonic: 'Save the word sequence to restore the key',
             Failed: 'A wallet could not be created at this moment',
         }
     }
