@@ -29,15 +29,15 @@ default:
 const getPrice = currency => c_exchange.getTicker({ currency: currency || 'USD' });
 
 const getFee = () => {
-    return c_blockexplorer.getLatestBlock().then((block) => {
-        return c_blockexplorer.getBlock(block.hash).then(block => block.fee);
-    });
+    return c_blockexplorer.getLatestBlock()
+        .then(block => c_blockexplorer.getBlock(block.hash))
+        .then(block => block.fee);
 };
 
 const broadcast = tx => c_pushtx(tx).then(result => result === Constants.ReturnValues.TransactionSubmitted);
 
 const getUnspentOutputs = (wallet) => {
-    c_blockexplorer.getUnspentOutputs(wallet.address).then((result) => {
+    return c_blockexplorer.getUnspentOutputs(wallet.address).then((result) => {
         return {
             utxos: result.unspent_outputs,
             coins: result.unspent_outputs.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis

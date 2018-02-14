@@ -51,8 +51,8 @@ class WalletsContent extends React.Component {
 
         Wallet.load().then((wallets) => {
             this.setState({ wallets: wallets });
-            this.loadAllUTXOs(wallets);
-        }).catch((e) => {
+            return this.loadAllUTXOs(wallets);
+        }, (e) => {
             console.log(e);
             message.error('Could not load wallets from database');
         });
@@ -91,15 +91,16 @@ class WalletsContent extends React.Component {
                     message.success(Constants.Messages.Wallet.Created);
 
                     setTimeout(() => {
-                        Modal.success({
+                        Modal.warning({
                             title: Constants.Messages.Wallet.Mnemonic,
-                            content: 'Save the following sequence to restore:\n' + mnemonic,
+                            content: mnemonic,
                         });
-                    }, 2000);
+                    }, 3000);
 
-                }).catch(() => {
+                }).catch((e) => {
                     Modal.error({
                         title: Constants.Messages.Wallet.Failed,
+                        content: e.toString(),
                     });
                 });
             });

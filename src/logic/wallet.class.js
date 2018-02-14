@@ -131,6 +131,9 @@ class Wallet {
     }
 
     static load(q = {}) {
+
+        Object.assign(q, { network: bnet.name }); // only load wallets of the current network
+
         return new Promise((res, rej) => {
             Wallet.Db.find(q, (err, docs) => {
                 if (err) rej(err);
