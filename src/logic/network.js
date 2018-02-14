@@ -36,8 +36,8 @@ const getFee = () => {
 
 const broadcast = tx => c_pushtx(tx).then(result => result === Constants.ReturnValues.TransactionSubmitted);
 
-const getUnspentOutputs = (wallet) => {
-    return c_blockexplorer.getUnspentOutputs(wallet.address).then((result) => {
+const getUnspentOutputs = (address) => {
+    return c_blockexplorer.getUnspentOutputs(address).then((result) => {
         return {
             utxos: result.unspent_outputs,
             coins: result.unspent_outputs.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis

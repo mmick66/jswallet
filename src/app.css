@@ -13,3 +13,7 @@
 .ant-layout {
     height: 100vh;
 }
+
+tr {
+    cursor: copy;
+}

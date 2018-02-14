@@ -50,10 +50,11 @@ class WalletsContent extends React.Component {
 
         Wallet.all().then((wallets) => {
 
-            wallets.forEach((w,i) => {
-                w.update().then(() => {
+            wallets.forEach((w) => {
+                w.on(Wallet.Events.Updated, () => {
                     this.forceUpdate();
                 });
+                w.update();
             });
 
             this.setState({ wallets: wallets });
@@ -125,16 +126,18 @@ class WalletsContent extends React.Component {
 
             Hasher.hash(values.password).then((hash) => {
 
-
-                if (hash === this.state.sourceWallet.pass) {
-                    this.state.sourceWallet.send(values.bitcoin, values.address, hash);
-                } else {
+                if (hash !== this.state.sourceWallet.pass) {
                     message.error('Wrong password.');
+                    return;
                 }
 
-            }).catch((e) => {
+                this.state.sourceWallet.send(
+                    values.bitcoin, values.address, hash
+                );
+
+            }, (e) => {
                 console.log(e);
-                message.error(e);
+                message.error('Bad format for password entered');
             });
 
         });
@@ -196,7 +199,7 @@ class WalletsContent extends React.Component {
                             shape="circle"
                             icon="reload"
                             style={{ marginLeft: '8px' }}
-                            onClick={this.loadAllUTXOs} />
+                            onClick={() => this.state.wallets.forEach(w => w.update())} />
                 </div>
                 <Modal
                   title="Create a New Wallet"

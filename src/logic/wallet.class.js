@@ -112,9 +112,7 @@ class Wallet extends EventEmitter {
 
 
     static get store() {
-        if (!Wallet.__store) {
-            Wallet.__store = new Database('wallets');
-        }
+        if (!Wallet.__store) Wallet.__store = new Database(Wallet.Defaults.DBFileName);
         return Wallet.__store;
     }
 
@@ -152,16 +150,17 @@ class Wallet extends EventEmitter {
 
         return bnet.api.getUnspentOutputs(this.address).then((result) => {
             this.utxos = result.utxos;
+            this.emit(Wallet.Events.Updated);
             return true;
-        }).catch((e) => {
-            if (e.toString() !== Constants.ReturnValues.NoFreeOutputs) {
-                throw new Error(e);
+        }, (e) => {
+            if (e.toString() === Constants.ReturnValues.NoFreeOutputs) {
+                this.emit(Wallet.Events.Updated);
             }
         });
     }
 
     save() {
-        return Wallet.Db.save(this.toObject());
+        return Wallet.store.save(this.toObject());
     }
 
 
@@ -184,10 +183,12 @@ class Wallet extends EventEmitter {
 Wallet.Defaults = {
     Encryption: 'aes-256-cbc',
     Path: "m/44'/0'/0'/0/0",
+    DBFileName: 'wallets',
 };
 
-
-
+Wallet.Events = {
+  Updated: 'updated',
+};
 
 
 export default Wallet;
