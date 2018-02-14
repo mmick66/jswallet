@@ -8,13 +8,23 @@ const bs58 = require('bs58');
 
 const isValidNumber = value => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
+const isValidBitcoinAddress = (rule, value, callback) => {
+    try {
+        bs58.decode(value);
+        callback();
+    } catch (e) {
+        callback(e);
+    }
+};
+
 class CreateTransactionForm extends React.Component {
 
     constructor(props) {
         super(props);
 
         this.rate = props.rate || 1.0;
-
+        this.fees = props.fees || 0.0;
+        this.wallet = props.sender;
 
         this.state = {
             amountInDollars: 0.0,
@@ -26,50 +36,53 @@ class CreateTransactionForm extends React.Component {
             unlock: <Icon type="unlock" style={{ color: 'rgba(0,0,0,.25)' }} />,
         };
 
-        this.convertDollars = this.convertDollars.bind(this);
-        this.convertBitcoin = this.convertBitcoin.bind(this);
-        this.checkBitcoinAddress = this.checkBitcoinAddress.bind(this);
+        this.convertDollarsToBitcoin = this.convertDollarsToBitcoin.bind(this);
+        this.convertBitcoinToDollars = this.convertBitcoinToDollars.bind(this);
     }
 
-
-
-    convertDollars(rule, value, callback) {
+    convertDollarsToBitcoin(rule, value, callback) {
 
         const form = this.props.form;
 
         if (!isValidNumber(value)) {
             callback('The value is not numeric');
-        } else {
-            form.setFieldsValue({
-                bitcoin: (value * this.rate).toFixed(Constants.Bitcoin.Decimals),
-            });
-            callback();
+            return;
         }
+
+        const bitcoin = (value * this.rate).toFixed(Constants.Bitcoin.Decimals);
+
+        if (bitcoin + this.fees >= this.wallet.coins) {
+            callback('Not enough funds');
+            return;
+        }
+
+        form.setFieldsValue({
+            bitcoin: bitcoin,
+        });
+
+        callback();
 
     }
 
-    convertBitcoin(rule, value, callback) {
+    convertBitcoinToDollars(rule, value, callback) {
 
         const form = this.props.form;
 
         if (!isValidNumber(value)) {
             callback('The value is not numeric');
-        } else {
-            form.setFieldsValue({
-                dollars: value / this.rate
-            });
-            callback();
+            return;
         }
 
-    }
-
-    checkBitcoinAddress(rule, value, callback) {
-        try {
-            bs58.decode(value);
-            callback();
-        } catch (e) {
-            callback(e);
+        if (value + this.fees >= this.wallet.coins) {
+            callback('Not enough funds');
+            return;
         }
+
+        form.setFieldsValue({
+            dollars: value / this.rate,
+        });
+
+        callback();
     }
 
 
@@ -85,7 +98,7 @@ class CreateTransactionForm extends React.Component {
                         rules: [{
                             required: true, message: 'Please input an address!',
                         }, {
-                            validator: this.checkBitcoinAddress,
+                            validator: isValidBitcoinAddress,
                         }],
                     })(
                         <Input placeholder="Receiver's Address" prefix={this.icons.qrcode} />
@@ -99,7 +112,7 @@ class CreateTransactionForm extends React.Component {
                         rules: [{
                             required: true, message: 'Please input an address!',
                         }, {
-                            validator: this.convertDollars,
+                            validator: this.convertDollarsToBitcoin,
                         }],
                     })(
                         <Input placeholder="Amount in Dollars" prefix={'$'} />
@@ -111,7 +124,7 @@ class CreateTransactionForm extends React.Component {
 
                     {getFieldDecorator('bitcoin', {
                         rules: [{
-                            validator: this.convertBitcoin,
+                            validator: this.convertBitcoinToDollars,
                         }],
                     })(
                         <Input placeholder="Amount in Dollars"

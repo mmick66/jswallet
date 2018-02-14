@@ -11,6 +11,20 @@ import Hasher from './logic/hasher.util';
 import Wallet from './logic/wallet.class';
 import bnet from './logic/network';
 
+const validateFormHashed = (form) => {
+    return new Promise((res, rej) => {
+        form.validateFields((err, values) => {
+            if (err) rej(err);
+            Hasher.hash(values.password).then((hash) => {
+                values.password = hash;
+                res(values);
+            }, (e) => {
+                rej(e);
+            });
+        });
+    });
+};
+
 class WalletsContent extends React.Component {
 
     constructor(props) {
@@ -22,7 +36,6 @@ class WalletsContent extends React.Component {
             price: 1.0,
             total: 0.0,
             wallets: [],
-            creatingKeys: false,
             sendingPayment: false,
             sourceWallet: null,
         };
@@ -67,80 +80,66 @@ class WalletsContent extends React.Component {
 
     handleCreate() {
 
-        this.form.validateFields((err, values) => {
+        validateFormHashed(this.form).then((values) => {
 
-            if (err) return;
+            this.form.resetFields();
+            this.setState({ modalOpenCreate: false });
 
-            this.setState({ creatingKeys: true });
+            const mnemonic = Wallet.generate();
 
-            Hasher.hash(values.password).then((hash) => {
+            const wallet = Wallet.create(values.name, mnemonic).encrypt(values.password);
 
-                if (err) {
-                    message.error('Could not hash the password');
-                    return;
-                }
+            this.__addWallet(wallet, mnemonic);
+        });
 
-                this.form.resetFields();
-                this.setState({ modalOpenCreate: false });
+    }
 
-                const mnemonic = Wallet.generate();
+    __addWallet(wallet, mnemonic) {
 
-                const wallet = Wallet.create(values.name, mnemonic);
+        this.setState({
+            wallets: this.state.wallets.concat([wallet]),
+        });
 
-                wallet.encrypt(hash);
+        wallet.save().then(() => {
 
-                this.setState({
-                    wallets: this.state.wallets.concat([wallet])
+            message.success(Constants.Messages.Wallet.Created);
+
+            setTimeout(() => {
+                Modal.warning({
+                    title: Constants.Messages.Wallet.Mnemonic,
+                    content: mnemonic,
                 });
+            }, 3000);
 
-                wallet.save().then(() => {
-
-                    message.success(Constants.Messages.Wallet.Created);
-
-                    setTimeout(() => {
-                        Modal.warning({
-                            title: Constants.Messages.Wallet.Mnemonic,
-                            content: mnemonic,
-                        });
-                    }, 3000);
-
-                }).catch((e) => {
-                    Modal.error({
-                        title: Constants.Messages.Wallet.Failed,
-                        content: e.toString(),
-                    });
-                });
+        }, (e) => {
+            Modal.error({
+                title: Constants.Messages.Wallet.Failed,
+                content: e.toString(),
             });
-
         });
     }
 
 
     handleSendit() {
 
-        this.form.validateFields((err, values) => {
-
-            if (err) return;
+        validateFormHashed(this.form).then((values) => {
 
             this.setState({ modalOpenSend: false });
 
-            Hasher.hash(values.password).then((hash) => {
+            if (!this.state.sourceWallet.matches(values.password)) {
+                message.error('Wrong password entered.');
+                return;
+            }
 
-                if (hash !== this.state.sourceWallet.pass) {
-                    message.error('Wrong password.');
-                    return;
-                }
+            this.state.sourceWallet.send(
+                values.bitcoin, values.address, values.password
+            );
 
-                this.state.sourceWallet.send(
-                    values.bitcoin, values.address, hash
-                );
-
-            }, (e) => {
-                console.log(e);
-                message.error('Bad format for password entered');
-            });
-
+        }, (e) => {
+            console.log(e);
+            message.error('Bad format for password entered');
         });
+
 
     }
 
@@ -206,7 +205,6 @@ class WalletsContent extends React.Component {
                   visible={this.state.modalOpenCreate}
                   okText="Create"
                   onCancel={this.handleCancel}
-                  confirmLoading={this.state.creatingKeys}
                   onOk={this.handleCreate}>
                     <CreateForm
                         ref={form => (this.form = form)}
@@ -230,6 +228,7 @@ class WalletsContent extends React.Component {
                     <CreateTransaction
                         ref={form => (this.form = form)}
                         sender={this.state.sourceWallet}
+                        fees={this.fee}
                         rate={1.0 / this.state.price} />
                 </Modal>
 

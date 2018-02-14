@@ -28,6 +28,11 @@ class Wallet extends EventEmitter {
 
     }
 
+    /**
+     * This will set the unspend outputs as retrieved by the network.
+     * It will also parse them to retrieve the total number of coins available to the wallet
+     * @param value
+     */
     set utxos(value) {
         this.__utxos = value;
         this.__coins = value.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis;
@@ -37,6 +42,10 @@ class Wallet extends EventEmitter {
         return this.__utxos;
     }
 
+    /**
+     * Coins cannot be set explicitly since they are set through assigning unspent outputs
+     * @returns {number|*}
+     */
     get coins() {
         return this.__coins;
     }
@@ -61,23 +70,40 @@ class Wallet extends EventEmitter {
         return this.__network;
     }
 
+    /**
+     * This is irreversible as there is not way to decrypt the wallet for good.
+     * The only way to read the key is with the readDecrypted function
+     * @param password Cleartext or hashed makes no difference
+     * @returns {Wallet} It returns itself
+     * @code const wallet = Wallet.create(name, mnemonic).encrypt(password);
+     */
     encrypt(password) {
         if (this.__password) throw new Error('Cannot re-encrypt an encrypted key');
         this.__password = password;
         const cipher = crypto.createCipher(Wallet.Defaults.Encryption, password);
-        return cipher.update(this.__wif, 'utf8', 'hex') + cipher.final('hex');
+        this.__wif = cipher.update(this.__wif, 'utf8', 'hex') + cipher.final('hex');
+        return this;
     }
 
+    /**
+     * This method will NOT decrypt the wallet but temporarily the key and return it to the calling code
+     * This method is NOT symmetrical with the encrypt one.
+     * @param password Hashed or not it will be used, it only needs to match the one used in encryption
+     * @returns {string} It will not return the wallet itself like the encrypt
+     */
     readDecrypted(password) {
         if (!this.__password) throw new Error('Cannot de-encrypt an key that was not encrypted');
-        if (!password || (password !== this.__password)) throw new Error('Passwords do not match');
+        if (!password || !this.matches(password)) throw new Error('Passwords do not match');
         const cipher = crypto.createDecipher(Wallet.Defaults.Encryption, password);
         return cipher.update(this.__wif, 'hex', 'utf8') + cipher.final('utf8');
     }
 
+    matches(password) {
+        return password === this.__password;
+    }
+
 
     send(btc, address, password) {
-
 
         const satoshis = Number(btc).toFixed(Constants.Bitcoin.Decimals) * Constants.Bitcoin.Satoshis;
 
