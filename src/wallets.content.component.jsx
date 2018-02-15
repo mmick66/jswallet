@@ -132,17 +132,17 @@ class WalletsContent extends React.Component {
             }
 
             this.state.sourceWallet.send(
-                values.bitcoin, values.address, values.password
-            ).then((result) => {
-                console.log('result: ', result);
+                values.bitcoin, values.address, this.fee, values.password
+            ).then(() => {
+                message.success(Constants.Messages.Transactions.Sent);
             }).catch((error) => {
+
+                const info = { title: Constants.Messages.Transactions.NOTSent };
                 const substring = Constants.ReturnValues.Fragments.MinimumFeeNotMet;
                 if (error.toString().includes(substring)) {
-                    Modal.error({
-                        title: Constants.Messages.Transactions.NOTSent,
-                        content: Constants.Messages.Errors.FeeNotMet,
-                    });
+                    info.content = Constants.Messages.Errors.FeeNotMet;
                 }
+                Modal.error(info);
             });
 
         }, (e) => {

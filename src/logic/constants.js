@@ -22,7 +22,7 @@ export default {
         },
         Transactions: {
             NOTSent: 'Transaction could not be sent',
-            Send: 'Your transaction was sent'
+            Sent: 'Your transaction was sent'
         },
         Errors: {
             FeeNotMet: 'A fee to process this transaction was not provided'
