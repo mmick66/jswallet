@@ -109,7 +109,7 @@ class WalletsContent extends React.Component {
                     title: Constants.Messages.Wallet.Mnemonic,
                     content: mnemonic,
                 });
-            }, 3000);
+            }, 2000);
 
         }, (e) => {
             Modal.error({
@@ -133,7 +133,17 @@ class WalletsContent extends React.Component {
 
             this.state.sourceWallet.send(
                 values.bitcoin, values.address, values.password
-            );
+            ).then((result) => {
+                console.log('result: ', result);
+            }).catch((error) => {
+                const substring = Constants.ReturnValues.Fragments.MinimumFeeNotMet;
+                if (error.toString().includes(substring)) {
+                    Modal.error({
+                        title: Constants.Messages.Transactions.NOTSent,
+                        content: Constants.Messages.Errors.FeeNotMet,
+                    });
+                }
+            });
 
         }, (e) => {
             console.log(e);
