@@ -13,6 +13,16 @@ npm install
 npm start
 ```
 
+## Design Principles
+
+Key derivation is the beating heart of a Bitcoin Wallet and most security concerns have to do with this first step.
+
+My code is mainly intended as an illustration of the following patter:
+
+<p align="center"> 
+  <img src="https://github.com/mmick66/jswallet/blob/master/assets/Key%20Chain.png">
+</p>
+
 ## Warnings
 
 As stated above this is **not** production code. 
