@@ -19,9 +19,7 @@ Key derivation is the beating heart of a Bitcoin Wallet and most security concer
 
 My code is mainly intended as an illustration of the following patter:
 
-<p align="center"> 
-  <img src="https://github.com/mmick66/jswallet/blob/master/assets/Key%20Chain.png">
-</p>
+![Key Derivation](https://github.com/mmick66/jswallet/blob/master/assets/Key%20Chain.png)
 
 ## Warnings
 
