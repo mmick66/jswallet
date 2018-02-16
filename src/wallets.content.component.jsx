@@ -111,7 +111,7 @@ class WalletsContent extends React.Component {
                     title: Constants.Messages.Wallet.Mnemonic,
                     content: mnemonic,
                 });
-            }, 2000);
+            }, 1000);
 
         }, (e) => {
             Modal.error({
@@ -265,7 +265,7 @@ class WalletsContent extends React.Component {
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
-                    <h3>Total: {`$${(this.state.total * this.state.price).toFixed(2)}` }</h3>
+                    <h3>Total: {`$${(this.state.total * this.state.price).toFixed(2)}` }</h3><span>{`(at $${this.state.price} per BTC)`}</span>
                 </div>
             </div>
         );

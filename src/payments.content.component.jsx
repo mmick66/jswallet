@@ -1,13 +1,11 @@
 import React from 'react';
 import Datastore from 'nedb';
 
-import { Button, Table, Modal, message } from 'antd';
+import { Button, Icon, Table, Modal, message } from 'antd';
 
 import TransactionDisplay from './transaction.display';
 import Wallet from './logic/wallet.class';
 import net from './logic/network';
-
-const env = require('./env.json');
 
 class PaymentsContent extends React.Component {
 
@@ -19,6 +17,8 @@ class PaymentsContent extends React.Component {
             modalOpenTransactionDetails: false,
         };
 
+        this.wallets = {};
+
         this.showDetails = this.showDetails.bind(this);
         this.handleOk = this.handleOk.bind(this);
 
@@ -28,11 +28,15 @@ class PaymentsContent extends React.Component {
     componentDidMount() {
 
         Wallet.all().then((wallets) => {
+            wallets.forEach((w) => {
+                this.wallets[w.address] = w;
+            });
+
             net.api.getTransactions(wallets.map(w => w.address)).then((txs) => {
+                console.log(txs);
                 this.transactions = txs;
             });
         });
-
     }
 
 
@@ -41,11 +45,13 @@ class PaymentsContent extends React.Component {
         this._transactions = data;
 
         const payments = [];
-        data.forEach((tx,i) => {
+        data.forEach((tx, i) => {
             tx.out.forEach((out, j) => {
                 payments.push({
                     key: `${i}/${j}`,
+                    name: this.wallets[out.addr].name,
                     address: out.addr,
+                    time: new Date(tx.time * 1000).toDateString(),
                     coins: out.value / 100000000,
                     hash: tx.hash,
                 });
@@ -81,8 +87,10 @@ class PaymentsContent extends React.Component {
     render() {
 
         const columns = [
-            { title: 'Address', dataIndex: 'address', key: 'address' },
+            { title: 'Wallet', dataIndex: 'name', key: 'name' },
+            { title: 'Flow', render: record => <Icon type={record ? 'arrow-left' : 'arrow-right'} /> },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
+            { title: 'Date', dataIndex: 'time', key: 'time' },
         ];
 
         const onRowFactory = (record) => {
