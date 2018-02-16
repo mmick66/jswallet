@@ -143,7 +143,7 @@ class Wallet extends EventEmitter {
     }
 
     static all() {
-        return Wallet.store.load({ network: bnet.name }).then((docs) => {
+        return Wallet.store.find({ network: bnet.name }).then((docs) => {
             return docs.map(doc => new Wallet(doc));
         });
     }
@@ -186,7 +186,11 @@ class Wallet extends EventEmitter {
     }
 
     save() {
-        return Wallet.store.save(this.toObject());
+        return Wallet.store.insert(this.toObject());
+    }
+
+    erase() {
+        return Wallet.store.remove({ address: this.address });
     }
 
 

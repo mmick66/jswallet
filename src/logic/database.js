@@ -8,7 +8,7 @@ class Database {
         this.db = new Datastore({ filename: `./db/${name}.db`, autoload: true });
     }
 
-    load(q) {
+    find(q) {
         return new Promise((res, rej) => {
             this.db.find(q || {}, (err, docs) => {
                 if (err) rej(err);
@@ -17,9 +17,18 @@ class Database {
         });
     }
 
-    save(obj) {
+    insert(obj) {
         return new Promise((res, rej) => {
             this.db.insert(obj, (err) => {
+                if (err) rej(err);
+                res();
+            });
+        });
+    }
+
+    remove(q) {
+        return new Promise((res, rej) => {
+            this.db.remove(q, (err) => {
                 if (err) rej(err);
                 res();
             });

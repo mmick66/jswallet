@@ -177,6 +177,8 @@ class WalletsContent extends React.Component {
             this.setState({
                 wallets: this.state.wallets.filter(w => w !== record)
             });
+            record.erase();
+
         };
 
         const onAddressClick = (event, record) => {
