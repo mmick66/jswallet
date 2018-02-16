@@ -1,11 +1,14 @@
 import React from 'react';
-import { blockexplorer } from 'blockchain.info';
 import Datastore from 'nedb';
 
-import TransactionDisplay from './transaction.display';
-
 import { Button, Table, Modal, message } from 'antd';
+
+import TransactionDisplay from './transaction.display';
+import Wallet from './logic/wallet.class';
+import net from './logic/network';
+
 const env = require('./env.json');
+
 class PaymentsContent extends React.Component {
 
     constructor(props) {
@@ -24,41 +27,24 @@ class PaymentsContent extends React.Component {
 
     componentDidMount() {
 
-        this.db.find({ active: true }, (err, docs) => {
-            if (err) {
-                message.error('The wallets could not be loaded from the local db!');
-                return;
-            }
-            this.loadAllTransactions(docs);
+        Wallet.all().then((wallets) => {
+            net.api.getTransactions(wallets.map(w => w.address)).then((txs) => {
+                this.transactions = txs;
+            });
         });
 
     }
 
-    loadAllTransactions(wallets) {
-
-        const addresses = wallets.map(w => w.address);
-
-        const explorer = env.network === 'testnet' ? blockexplorer.usingNetwork(3) : blockexplorer;
-        explorer.getMultiAddress(addresses, {}).then((result) => {
-
-            this.transactions = Array.isArray(result.txs) ? result.txs : [];
-
-        }).catch((e) => {
-            console.log(e);
-            message.error('Could not fetch transactions');
-        });
-
-    }
 
     set transactions(data) {
 
         this._transactions = data;
 
         const payments = [];
-        data.forEach((tx) => {
-            tx.out.forEach((out, i) => {
+        data.forEach((tx,i) => {
+            tx.out.forEach((out, j) => {
                 payments.push({
-                    key: i,
+                    key: `${i}/${j}`,
                     address: out.addr,
                     coins: out.value / 100000000,
                     hash: tx.hash,
