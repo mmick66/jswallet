@@ -65,7 +65,9 @@ class WalletsContent extends React.Component {
 
             wallets.forEach((w) => {
                 w.on(Wallet.Events.Updated, () => {
-                    this.forceUpdate();
+                    this.setState({
+                       total: this.state.wallets.reduce((a, c) => a + c.coins ,0)
+                    });
                 });
                 w.update();
             });

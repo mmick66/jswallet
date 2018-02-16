@@ -13,7 +13,11 @@ class App extends React.Component {
         return (
             <Layout>
                 <Header className="Header">
-                    <h3>Electron JS Wallet for Bitcoin</h3>
+                    <img style={{ marginTop: '10px', height: '40px', width: 'auto', float: 'left', marginRight: '18px' }}
+                         src="./images/planet.png"
+                         alt="Bitcoin Logo" />
+
+                    <h3>JSWallet - Electron Wallet for Bitcoin</h3>
                 </Header>
                 <Content>
                     <div className="App">
