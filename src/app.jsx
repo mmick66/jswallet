@@ -36,7 +36,7 @@ class App extends React.Component {
                 </Content>
 
                 <Footer>
-                    Developed as an experiment by Michael Michailidis
+                    Developed by Michael Michailidis / Designs by Vecteezy
                 </Footer>
             </Layout>
 
