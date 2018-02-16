@@ -7,6 +7,7 @@
     "camelcase": 0,
     "prefer-template":0,
     "no-param-reassign": 0,
+    "object-property-newline": 0,
     "no-restricted-syntax": 0,
     "no-return-assign": ["error", "except-parens"],
     "object-shorthand": 0,

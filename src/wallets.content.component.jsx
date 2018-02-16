@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Button, Table, Modal, message } from 'antd';
+import { Button, Table, Modal, message, Popconfirm } from 'antd';
 
 import { clipboard } from 'electron';
 
@@ -172,23 +172,42 @@ class WalletsContent extends React.Component {
             });
         };
 
+        const onDeleteRow = (event, record) => {
+            event.stopPropagation();
+            this.setState({
+                wallets: this.state.wallets.filter(w => w !== record)
+            });
+        };
+
+        const onAddressClick = (event, record) => {
+            clipboard.writeText(record.address);
+            message.success('Adress copied to the clipboard');
+        };
+
+
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name' },
-            { title: 'Address', dataIndex: 'address', key: 'address' },
+            { title: 'Address', key: 'address', render: (r) => {
+                return (
+                        <span tabIndex={0}
+                              role="button"
+                              style={{ cursor: 'copy' }}
+                              onClick={e => onAddressClick(e, r)}>{r.address}</span>
+                    );
+                }
+            },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
             { title: 'Send', key: 'send', render: r => <Button onClick={e => openSendModal(e, r)} icon="login" /> },
-            { title: 'Action', key: 'action', render: () => <a>Delete</a> },
+            { title: 'Action', key: 'action', render: (r) => {
+                return (
+                        <Popconfirm title="Sure to delete?"
+                                    onConfirm={e => onDeleteRow(e, r)}>
+                            <a>Delete</a>
+                        </Popconfirm>
+                    );
+                }
+            },
         ];
-
-        // full example: https://codesandbox.io/s/000vqw38rl
-        const onRowFactory = (record) => {
-            const config = {};
-            config.onClick = () => {
-                clipboard.writeText(record.address);
-                message.success('Adress copied to the clipboard');
-            };
-            return config;
-        };
 
         return (
             <div className="Wallets">
@@ -224,7 +243,6 @@ class WalletsContent extends React.Component {
 
                 <Table columns={columns}
                        dataSource={this.state.wallets}
-                       onRow={onRowFactory}
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
 
