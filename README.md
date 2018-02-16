@@ -1,5 +1,8 @@
 # JSWallet
 
+![Screen Shot](https://github.com/mmick66/jswallet/blob/master/assets/Screen_Shot.png)
+
+
 This is a companion to my [Medium tutotial](https://medium.com/@michael.m/lets-create-a-secure-hd-bitcoin-wallet-in-electron-react-js-575032c42bf3).
 
 It is **not** production code and should be used for educational puproses only.
