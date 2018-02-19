@@ -43,6 +43,7 @@ class WalletsContent extends React.Component {
         this.handleCreate = this.handleCreate.bind(this);
         this.handleSendit = this.handleSendit.bind(this);
         this.handleCancel = this.handleCancel.bind(this);
+        this.handleReload = this.handleReload.bind(this);
 
     }
 
@@ -137,11 +138,12 @@ class WalletsContent extends React.Component {
                 values.bitcoin, values.address, this.fee, values.password
             ).then(() => {
                 message.success(Constants.Messages.Transactions.Sent);
-            }).catch((error) => {
+                this.handleReload();
+            }, (e) => {
 
                 const info = { title: Constants.Messages.Transactions.NOTSent };
                 const substring = Constants.ReturnValues.Fragments.MinimumFeeNotMet;
-                if (error.toString().includes(substring)) {
+                if (e.toString().includes(substring)) {
                     info.content = Constants.Messages.Errors.FeeNotMet;
                 }
                 Modal.error(info);
@@ -161,6 +163,10 @@ class WalletsContent extends React.Component {
             modalOpenSend: false,
         });
         this.form = null;
+    }
+
+    handleReload() {
+        this.state.wallets.forEach(w => w.update());
     }
 
 
@@ -231,7 +237,7 @@ class WalletsContent extends React.Component {
                             shape="circle"
                             icon="reload"
                             style={{ marginLeft: '8px' }}
-                            onClick={() => this.state.wallets.forEach(w => w.update())} />
+                            onClick={this.handleReload} />
                 </div>
                 <Modal
                   title="Create a New Wallet"
