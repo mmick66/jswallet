@@ -29,7 +29,7 @@ My code is mainly intended as an illustration of the following pattern:
 This project was built using [electron-forge](https://github.com/electron-userland/electron-forge). I have had problems building it in some machines and apparently the issue is not uncommon. In theory it should work like so...
 
 ```
-npm build
+npm publish
 ```
 
 ## Warnings
