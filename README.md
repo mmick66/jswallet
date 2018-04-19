@@ -26,7 +26,7 @@ My code is mainly intended as an illustration of the following pattern:
 
 ## Building
 
-This project was built using [electron-forge](https://github.com/electron-userland/electron-forge). I have had problems building it in some machines and apparently the issue is not uncommon. In theory it should work like so...
+This project was built using [electron-forge](https://github.com/electron-userland/electron-forge). I have had problems building it in some machines and apparently the [issue is not uncommon](https://github.com/electron-userland/electron-forge/issues/434). In theory it should work like so...
 
 ```
 npm publish
