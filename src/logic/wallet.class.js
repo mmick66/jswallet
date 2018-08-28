@@ -21,10 +21,7 @@ class Wallet extends EventEmitter {
         this.__password = info.password || undefined;
 
         // public
-        this.__coins = 0;
         this.__utxos = [];
-
-        this.update();
 
     }
 
@@ -35,7 +32,6 @@ class Wallet extends EventEmitter {
      */
     set utxos(value) {
         this.__utxos = value;
-        this.__coins = value.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis;
     }
 
     get utxos() {
@@ -43,11 +39,11 @@ class Wallet extends EventEmitter {
     }
 
     /**
-     * Coins cannot be set explicitly since they are set through assigning unspent outputs
+     * Coins are not set explicitly but through the unspent outputs
      * @returns {number|*}
      */
     get coins() {
-        return this.__coins;
+        return this.utxos.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis;
     }
 
     get name() {

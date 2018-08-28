@@ -1,6 +1,7 @@
 import { exchange, blockexplorer, pushtx } from 'blockchain.info';
-import Constants from './constants';
 import bitcoin from 'bitcoinjs-lib';
+import Constants from './constants';
+
 
 const env = require('../env.json');
 
