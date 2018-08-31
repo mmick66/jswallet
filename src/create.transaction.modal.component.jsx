@@ -40,16 +40,20 @@ class CreateTransactionForm extends React.Component {
         this.convertBitcoinToDollars = this.convertBitcoinToDollars.bind(this);
     }
 
-    convertDollarsToBitcoin(rule, value, callback) {
+    convertDollarsToBitcoin(rule, stringValue, callback) {
 
         const form = this.props.form;
 
-        if (!isValidNumber(value)) {
+        if (!isValidNumber(stringValue)) {
             callback('The value is not numeric');
             return;
         }
 
-        const bitcoin = (value * this.rate).toFixed(Constants.Bitcoin.Decimals);
+        const value = parseFloat(stringValue);
+
+        const bitcoin = value * this.rate;
+
+        console.log({ value: value, bitcoin: bitcoin, fees: this.fees, coins: this.wallet.coins });
 
         if (bitcoin + this.fees >= this.wallet.coins) {
             callback('Not enough funds');
@@ -57,7 +61,7 @@ class CreateTransactionForm extends React.Component {
         }
 
         form.setFieldsValue({
-            bitcoin: bitcoin,
+            bitcoin: bitcoin.toFixed(Constants.Bitcoin.Decimals),
         });
 
         callback();

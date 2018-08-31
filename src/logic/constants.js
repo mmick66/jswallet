@@ -2,10 +2,16 @@ export default {
     Bitcoin: {
         Decimals: 8,
         Satoshis: 100000000,
-        Networks: {
-            Testnet: 'testnet',
-            Bitcoin: 'bitcoin',
-        }
+    },
+    Networks: {
+        Testnet: 'testnet',
+        Bitcoin: 'bitcoin',
+    },
+    Transactions: {
+        AverageBytes: 255
+    },
+    Endpoints: {
+        BitcoinFees: 'https://bitcoinfees.earn.com/api/v1/fees/recommended'
     },
     ReturnValues: {
         TransactionSubmitted: 'Transaction Submitted',

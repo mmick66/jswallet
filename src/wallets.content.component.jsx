@@ -11,6 +11,8 @@ import Hasher from './logic/hasher.util';
 import Wallet from './logic/wallet.class';
 import bnet from './logic/network';
 
+// Helper Functions
+
 const validateFormHashed = (form) => {
     return new Promise((res, rej) => {
         form.validateFields((err, values) => {
@@ -78,7 +80,6 @@ class WalletsContent extends React.Component {
             wallets.forEach((w) => {
                 w.on(Wallet.Events.Updated, () => {
                     const newTotal = this.state.wallets.reduce((a, c) => a + c.coins, 0);
-                    console.log(this.state.total, newTotal);
                     this.setState({ total: newTotal });
                 });
                 w.update();
@@ -220,7 +221,12 @@ class WalletsContent extends React.Component {
                 }
             },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
-            { title: 'Send', key: 'send', render: r => <Button onClick={e => openSendModal(e, r)} icon="login" /> },
+            { title: 'Send', key: 'send', render: (r) => {
+                return (
+                        <Button disabled={this.fees > 0} onClick={e => openSendModal(e, r)} icon="login" />
+                    );
+                }
+            },
             { title: 'Action', key: 'action', render: (r) => {
                 return (
                         <Popconfirm title="Sure to delete?"
