@@ -271,7 +271,8 @@ class WalletsContent extends React.Component {
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
-                    <h3>Total: {`$${(this.state.total * this.state.price).toFixed(2)}` }</h3><span>{`(at $${this.state.price} per BTC)`}</span>
+                    <h3>Total: {`$${(this.state.total * this.state.price).toFixed(2)}` }</h3>
+                    <span>{`(at $${this.state.price.toFixed(2)} per BTC)`}</span>
                 </div>
             </div>
         );

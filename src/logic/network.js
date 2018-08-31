@@ -24,7 +24,6 @@ case Constants.Bitcoin.Networks.Bitcoin:
     break;
 default:
     throw new Error('Unknown network in env file');
-
 }
 
 const getPrice = currency => c_exchange.getTicker({ currency: currency || 'USD' });
