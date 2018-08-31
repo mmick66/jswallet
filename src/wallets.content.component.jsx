@@ -25,6 +25,16 @@ const validateFormHashed = (form) => {
     });
 };
 
+const formatAmount = (amount) => {
+    const nf = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+    return nf.format(amount);
+};
+
 class WalletsContent extends React.Component {
 
     constructor(props) {
@@ -56,6 +66,7 @@ class WalletsContent extends React.Component {
         });
 
         bnet.api.getFee().then((fee) => {
+            console.log(fee);
             this.fee = fee;
         }).catch((e) => {
             console.log('Could not get fee ', e);
@@ -66,9 +77,9 @@ class WalletsContent extends React.Component {
 
             wallets.forEach((w) => {
                 w.on(Wallet.Events.Updated, () => {
-                    this.setState({
-                       total: this.state.wallets.reduce((a, c) => a + c.coins, 0)
-                    });
+                    const newTotal = this.state.wallets.reduce((a, c) => a + c.coins, 0);
+                    console.log(this.state.total, newTotal);
+                    this.setState({ total: newTotal });
                 });
                 w.update();
             });
@@ -168,6 +179,8 @@ class WalletsContent extends React.Component {
     handleReload() {
         this.state.wallets.forEach(w => w.update());
     }
+
+
 
 
     render() {
@@ -271,8 +284,8 @@ class WalletsContent extends React.Component {
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
-                    <h3>Total: {`$${(this.state.total * this.state.price).toFixed(2)}` }</h3>
-                    <span>{`(at $${this.state.price.toFixed(2)} per BTC)`}</span>
+                    <h3>Total: {`${formatAmount(this.state.total * this.state.price)}` }</h3>
+                    <span>{`(at ${formatAmount(this.state.price)} per BTC)`}</span>
                 </div>
             </div>
         );

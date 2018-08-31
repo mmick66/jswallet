@@ -20,7 +20,6 @@ class Wallet extends EventEmitter {
 
         this.__password = info.password || undefined;
 
-        // public
         this.__utxos = [];
 
     }
