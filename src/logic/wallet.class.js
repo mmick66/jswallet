@@ -186,7 +186,8 @@ class Wallet extends EventEmitter {
     }
 
     erase() {
-        return Wallet.store.remove({ address: this.address });
+        Wallet.store.remove({ address: this.address });
+        this.emit(Wallet.Events.Updated);
     }
 
 
