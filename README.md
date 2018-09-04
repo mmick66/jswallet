@@ -7,6 +7,8 @@ This is a companion to my [Medium tutotial](https://medium.com/@michael.m/lets-c
 
 It is **not** production code and should be used for educational puproses only.
 
+> It seems that at this moment, testnet is experiencing a tremendous amount of tranffic which has rendered the network practically unusable. The faucets are down and the transactions are stuck. We will all have to wait for while.
+
 ## Installation
 
 ```
