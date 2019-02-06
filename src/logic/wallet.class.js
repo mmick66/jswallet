@@ -101,6 +101,7 @@ class Wallet extends EventEmitter {
     send(btc, address, fee, password) {
 
         const satoshis = Math.round(btc * Constants.Bitcoin.Satoshis);
+        const satoshis_fee = Math.round(fee * Constants.Bitcoin.Satoshis);
 
         const network = bnet.current;
 
@@ -112,12 +113,12 @@ class Wallet extends EventEmitter {
             txb.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
 
             current += utx.value;
-            if (current >= (satoshis + fee)) break;
+            if (current >= (satoshis + satoshis_fee)) break;
         }
 
         txb.addOutput(address, satoshis);
 
-        const change = current - (satoshis + fee);
+        const change = current - (satoshis + satoshis_fee);
         if (change) txb.addOutput(this.address, change);
 
 
