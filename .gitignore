@@ -11,3 +11,6 @@ db
 
 # MacOS Folder DB
 .DS_Store
+
+# Visual Studio
+.vs
