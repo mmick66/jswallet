@@ -39,7 +39,3 @@ npm publish
 As stated above this is **not** production code. 
 It is set to work with *testnet* by default but by a simple change in the `env.js` it could well function with real bitcoins!
 
-
-## Moving Forward
-
-If anyone outhere has any coold suggestions on developing this pet project further please submit ideas in the issues tab.
