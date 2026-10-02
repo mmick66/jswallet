@@ -60,13 +60,18 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
+Node 24 (`.nvmrc`). Install with `npm ci` or `npm install`; neither needs `--legacy-peer-deps` or `--force`.
 
 ```bash
-# Example:
-# npm install
-# npm test
+npm run check   # ESLint on src (errors fail it, warnings don't) and every Vitest suite
+npm start       # Run the app from source (electron-forge start, renderer on the Vite dev server)
+npm run make    # Build the app and this platform's installers into out/make (zip on macOS)
 ```
+
+- While iterating, run one suite or lint one file: `npx vitest run test/<name>.test.js`, `npx eslint <file>`.
+- `npm run check` doesn't build the app. After changing the main process (`src/index.js`, `src/main/`),
+  the preload or the build config (`forge.config.mjs`, `vite.*.config.mjs`), also run `npm run package`.
+- `npm run audit` is CI's dependency audit: production dependencies, and Electron itself, at high or above.
 
 ## Architecture Overview
 
