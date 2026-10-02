@@ -1,0 +1,45 @@
+{
+  "generatedWith": {
+    "node": "v20.17.0",
+    "bitcoinjs-lib": "3.3.2",
+    "bip39": "2.6.0"
+  },
+  "vectors": [
+    {
+      "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "path": "m/44'/0'/0'/0/0",
+      "testnet": {
+        "address": "n1M8ZVQtL7QoFvGMg24D6b2ojWvFXCGpoS",
+        "wif": "cVB244V26CSLjv3xdR7KfoVdNufdqHSMuAMgjqBUfwWQR4WVFsky"
+      },
+      "bitcoin": {
+        "address": "1LqBGSKuX5yYUonjxT5qGfpUsXKYYWeabA",
+        "wif": "L4p2b9VAf8k5aUahF1JCJUzZkgNEAqLfq8DDdQiyAprQAKSbu8hf"
+      }
+    },
+    {
+      "mnemonic": "legal winner thank year wave sausage worth useful legal winner thank yellow",
+      "path": "m/44'/0'/0'/0/0",
+      "testnet": {
+        "address": "mthrx56hRLtUrsWuE4m19sEvKxXYjxqqKS",
+        "wif": "cN6ermGNKfw9HgTMBUf2DHaNYo2k7oy2xo1b4j6KzNAvQA6hi9Se"
+      },
+      "bitcoin": {
+        "address": "1EBuf21icKTE5m3HWVndKx2bTxvqrWCqV6",
+        "wif": "KwjfPrGWtcEt8Ez5o4qtqy5JvZjLTMsLtks7xJdpVFWv9R4v21Df"
+      }
+    },
+    {
+      "mnemonic": "void come effort suffer camp survey warrior heavy shoot primary clutch crush open amazing screen patrol group space point ten exist slush involve unfold",
+      "path": "m/44'/0'/0'/0/0",
+      "testnet": {
+        "address": "moDvLuyvBJZ16KRjLdAMFRvN96Y1mpewGg",
+        "wif": "cUqVE2HdjjgywA5HLC9p6SKXUFhRR93gE78yD9RXV3jB54JzeoEA"
+      },
+      "bitcoin": {
+        "address": "18hy3rtwNH7kKCx7d4ByRWi3H6wJsSD9aW",
+        "wif": "L4UVm7HnJfzimic1wnLgj7pTr2Q1kgwzA4zW6iy1yw5ApKGuiEK1"
+      }
+    }
+  ]
+}
