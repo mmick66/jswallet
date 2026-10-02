@@ -1,10 +1,10 @@
-import React, { createElement } from 'react';
+import React from 'react';
 
 import { Button, Dropdown } from 'antd';
 import { DownOutlined } from '@ant-design/icons';
 
 import {
-    LineChart, Line, CartesianGrid, XAxis, YAxis
+    LineChart, Line, CartesianGrid, XAxis, YAxis, useXAxisTicks, useYAxisTicks
 } from 'recharts';
 
 import jswallet from './jswallet';
@@ -15,6 +15,19 @@ const timespans = [
     { key: '90days', label: '90 days' },
     { key: '1year', label: '1 year' },
 ];
+
+// CartesianGrid picks its own ticks, measuring their labels in the page's font size rather than the axes'
+// (antd's 14px), so its lines can miss the labels the axes show. Draw them at the axes' rendered ticks.
+function PriceGrid() {
+    const coordinates = (ticks) => ticks?.map((tick) => tick.coordinate);
+    return (
+        <CartesianGrid
+            stroke="#ccc"
+            strokeDasharray="5 5"
+            verticalPoints={coordinates(useXAxisTicks())}
+            horizontalPoints={coordinates(useYAxisTicks())} />
+    );
+}
 
 class StatsContent extends React.Component {
 
@@ -74,18 +87,16 @@ class StatsContent extends React.Component {
 
 
                 <LineChart
-                    width={600}
-                    height={300}
+                    responsive
+                    style={{ width: '100%', height: 300 }}
                     data={data}
                     margin={{
                         top: 5, right: 5, bottom: 5, left: 5
                     }}>
-                    {/* recharts 1 reads its children's defaultProps from their elements. React 19's JSX no longer
-                        puts them there, but createElement still does. Back to JSX with recharts 3 (jswallet-2cb.10). */}
-                    {createElement(Line, { type: 'monotone', dataKey: 'price', stroke: '#8884d8' })}
-                    {createElement(CartesianGrid, { stroke: '#ccc', strokeDasharray: '5 5' })}
-                    {createElement(XAxis, { dataKey: 'date' })}
-                    {createElement(YAxis)}
+                    <Line type="monotone" dataKey="price" stroke="#8884d8" />
+                    <PriceGrid />
+                    <XAxis dataKey="date" />
+                    <YAxis />
                 </LineChart>
             </div>
 
