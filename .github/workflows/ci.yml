@@ -28,3 +28,35 @@ jobs:
       - run: npm ci --strict-allow-scripts
       - run: npm run check
       - run: npm run audit
+
+  # Builds every maker of forge.config.mjs on its platform: Squirrel on Windows, ZIP on macOS,
+  # deb and rpm on Linux. With CI set, Forge logs "Making a <maker> distributable for <platform>/<arch>".
+  make:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      # maker-rpm runs rpmbuild; maker-deb's dpkg and fakeroot are on the image.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      # The Squirrel maker runs electron-winstaller's vendor/7z.exe, which its install script copies
+      # (approved in package.json allowScripts).
+      - run: npm ci --strict-allow-scripts
+      - run: npm run make
+      # Kept briefly, so a build can be checked by hand. The distributables are compressed already.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: make-${{ runner.os }}
+          path: out/make
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
