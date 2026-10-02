@@ -7,6 +7,7 @@ import bnet from './network';
  * @param address As entered by the user
  * @returns {boolean}
  */
+// eslint-disable-next-line import-x/prefer-default-export -- callers and tests import { isValidAddress } by name
 export const isValidAddress = (address) => {
     if (typeof address !== 'string') return false;
     try {

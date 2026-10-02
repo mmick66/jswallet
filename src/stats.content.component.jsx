@@ -2,7 +2,9 @@ import React from 'react';
 
 import { Menu, Dropdown, Icon } from 'antd';
 
-import { LineChart, Line, CartesianGrid, XAxis, YAxis } from 'recharts';
+import {
+    LineChart, Line, CartesianGrid, XAxis, YAxis
+} from 'recharts';
 
 import net from './logic/network';
 
@@ -47,15 +49,23 @@ class StatsContent extends React.Component {
     onTimespanSelect({ key }) {
         let tspan = '';
         switch (key) {
-        case '1': tspan = '30days'; break;
-        case '2': tspan = '90days'; break;
-        case '3': tspan = '1year'; break;
+        case '1':
+            tspan = '30days';
+            break;
+        case '2':
+            tspan = '90days';
+            break;
+        case '3':
+            tspan = '1year';
+            break;
         default: break;
         }
         this.loadPriceData(tspan);
     }
 
     render() {
+
+        const { data } = this.state;
 
         const timespan = (
             <Menu onClick={this.onTimespanSelect}>
@@ -68,12 +78,21 @@ class StatsContent extends React.Component {
             <div>
                 <div style={{ marginBottom: '18px' }}>
                     <Dropdown overlay={timespan}>
-                        <a className="ant-dropdown-link">Time Period <Icon type="down" /></a>
+                        <a className="ant-dropdown-link">
+                            {'Time Period '}
+                            <Icon type="down" />
+                        </a>
                     </Dropdown>
                 </div>
 
 
-                <LineChart width={600} height={300} data={this.state.data} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                <LineChart
+                    width={600}
+                    height={300}
+                    data={data}
+                    margin={{
+                        top: 5, right: 5, bottom: 5, left: 5
+                    }}>
                     <Line type="monotone" dataKey="price" stroke="#8884d8" />
                     <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
                     <XAxis dataKey="date" />

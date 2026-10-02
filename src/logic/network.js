@@ -31,7 +31,7 @@ const toError = (e) => {
     return new Error(`${e.message}${detail}`, { cause: e });
 };
 
-const unwrap = request => request.then(response => response.data, (e) => {
+const unwrap = (request) => request.then((response) => response.data, (e) => {
     throw toError(e);
 });
 
@@ -45,27 +45,27 @@ const asText = { responseType: 'text' };
 
 // Normalized shapes, so that the UI does not depend on the provider
 
-const toUtxo = utxo => ({
+const toUtxo = (utxo) => ({
     txid: utxo.txid,
     vout: utxo.vout,
     value: utxo.value,
 });
 
 // Coinbase inputs have no prevout; OP_RETURN and bare scripts have no address
-const toEntry = output => ({
+const toEntry = (output) => ({
     address: (output && output.scriptpubkey_address) || null,
     value: output ? output.value : 0,
 });
 
-const toTransaction = tx => ({
+const toTransaction = (tx) => ({
     hash: tx.txid,
     time: tx.status.confirmed ? tx.status.block_time : null,
-    inputs: tx.vin.map(vin => toEntry(vin.prevout)),
+    inputs: tx.vin.map((vin) => toEntry(vin.prevout)),
     outputs: tx.vout.map(toEntry),
 });
 
 // Unconfirmed transactions (no time yet) first, then newest first
-const recency = tx => (tx.time === null ? Number.MAX_SAFE_INTEGER : tx.time);
+const recency = (tx) => (tx.time === null ? Number.MAX_SAFE_INTEGER : tx.time);
 const byNewest = (a, b) => recency(b) - recency(a);
 
 
@@ -79,10 +79,10 @@ const getPrice = (currency = 'USD') => get(Constants.Endpoints.Prices).then((pri
  * @param timespan One of '30days', '90days' or '1year'
  * @returns {Promise<Array<{time: number, price: number}>>} Daily USD prices, time in seconds
  */
-const getPriceChart = timespan => get(Constants.Endpoints.PriceChart, {
+const getPriceChart = (timespan) => get(Constants.Endpoints.PriceChart, {
     // cors=true makes blockchain.info send the CORS headers a browser renderer needs
     params: { timespan: timespan, format: 'json', cors: true },
-}).then(chart => chart.values.map(point => ({ time: point.x, price: point.y })));
+}).then((chart) => chart.values.map((point) => ({ time: point.x, price: point.y })));
 
 /**
  * The fee in bitcoins for an average transaction at the fastest rate (sat/vB)
@@ -95,18 +95,18 @@ const getFee = () => get(`${c_apiBase}${Constants.Endpoints.Fees}`).then((fees) 
  * @param tx The signed transaction as hex
  * @returns {Promise<string>} The txid; rejects with the node's error text
  */
-const broadcast = tx => post(`${c_apiBase}/tx`, tx, {
+const broadcast = (tx) => post(`${c_apiBase}/tx`, tx, {
     headers: { 'Content-Type': 'text/plain' },
     ...asText,
 });
 
-const getTxHex = txid => get(`${c_apiBase}/tx/${txid}/hex`, asText);
+const getTxHex = (txid) => get(`${c_apiBase}/tx/${txid}/hex`, asText);
 
 /**
  * @returns {Promise<Array<{txid: string, vout: number, value: number}>>} Values in satoshis
  */
 const getUnspentOutputs = (address) => {
-    return get(`${c_apiBase}/address/${address}/utxo`).then(utxos => utxos.map(toUtxo));
+    return get(`${c_apiBase}/address/${address}/utxo`).then((utxos) => utxos.map(toUtxo));
 };
 
 /**
@@ -115,7 +115,7 @@ const getUnspentOutputs = (address) => {
  * @returns {Promise<Array<{hash, time, inputs: Array<{address, value}>, outputs: Array<{address, value}>}>>}
  */
 const getTransactions = (addresses) => {
-    return Promise.all(addresses.map(address => get(`${c_apiBase}/address/${address}/txs`))).then((pages) => {
+    return Promise.all(addresses.map((address) => get(`${c_apiBase}/address/${address}/txs`))).then((pages) => {
         const byHash = new Map();
         pages.forEach((txs) => {
             txs.forEach((tx) => {

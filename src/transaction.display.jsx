@@ -1,7 +1,7 @@
 import React from 'react';
 import { List } from 'antd';
 
-const describe = entry => `${entry.address || '(no address)'} ${entry.value}`;
+const describe = (entry) => `${entry.address || '(no address)'} ${entry.value}`;
 
 class TransactionDisplay extends React.Component {
 
@@ -30,10 +30,11 @@ class TransactionDisplay extends React.Component {
 
     render() {
 
+        const { hash, inputs, outputs } = this.state;
 
         return (
             <div>
-                <h3>{ this.state.hash }</h3>
+                <h3>{ hash }</h3>
 
                 <h4>Inputs</h4>
                 <List
@@ -41,8 +42,8 @@ class TransactionDisplay extends React.Component {
                     header={<div>Header</div>}
                     footer={<div>Footer</div>}
                     bordered
-                    dataSource={this.state.inputs}
-                    renderItem={item => (<List.Item>{item}</List.Item>)} />
+                    dataSource={inputs}
+                    renderItem={(item) => (<List.Item>{item}</List.Item>)} />
 
                 <h4>Outputs</h4>
                 <List
@@ -50,8 +51,8 @@ class TransactionDisplay extends React.Component {
                     header={<div>Header</div>}
                     footer={<div>Footer</div>}
                     bordered
-                    dataSource={this.state.outputs}
-                    renderItem={item => (<List.Item>{item}</List.Item>)} />
+                    dataSource={outputs}
+                    renderItem={(item) => (<List.Item>{item}</List.Item>)} />
 
             </div>
 

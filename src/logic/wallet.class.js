@@ -168,7 +168,7 @@ class Wallet extends EventEmitter {
         const psbt = new bitcoin.Psbt({ network: network });
 
         // Legacy P2PKH inputs are signed against the whole previous transaction
-        const previous = await Promise.all(spent.map(utxo => bnet.api.getTxHex(utxo.txid)));
+        const previous = await Promise.all(spent.map((utxo) => bnet.api.getTxHex(utxo.txid)));
         spent.forEach((utxo, i) => {
             const tx = bitcoin.Transaction.fromHex(previous[i]);
             const output = tx.outs[utxo.vout];
@@ -200,7 +200,7 @@ class Wallet extends EventEmitter {
 
     static all() {
         return Wallet.store.find({ network: bnet.name }).then((docs) => {
-            return docs.map(doc => new Wallet(doc));
+            return docs.map((doc) => new Wallet(doc));
         });
     }
 

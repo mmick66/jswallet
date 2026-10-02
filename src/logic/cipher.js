@@ -48,7 +48,7 @@ const evpBytesToKey = (password, keyLength, ivLength) => {
     };
 };
 
-const isLegacy = stored => !stored.startsWith(V2.Prefix);
+const isLegacy = (stored) => !stored.startsWith(V2.Prefix);
 
 /**
  * @param plaintext UTF-8 text to encrypt
@@ -63,13 +63,13 @@ const encrypt = (plaintext, password) => {
     const cipher = crypto.createCipheriv(V2.Algorithm, key, iv, { authTagLength: V2.TagLength });
     const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
 
-    return V2.Prefix + [salt, iv, cipher.getAuthTag(), ciphertext].map(b => b.toString('hex')).join(':');
+    return V2.Prefix + [salt, iv, cipher.getAuthTag(), ciphertext].map((b) => b.toString('hex')).join(':');
 };
 
 const decryptV2 = (stored, password) => {
     const fields = stored.slice(V2.Prefix.length).split(':');
     if (fields.length !== 4) throw new Error('Malformed encrypted value');
-    const [salt, iv, tag, ciphertext] = fields.map(f => Buffer.from(f, 'hex'));
+    const [salt, iv, tag, ciphertext] = fields.map((f) => Buffer.from(f, 'hex'));
     const key = crypto.scryptSync(password, salt, V2.KeyLength);
 
     const decipher = crypto.createDecipheriv(V2.Algorithm, key, iv, { authTagLength: V2.TagLength });

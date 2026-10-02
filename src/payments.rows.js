@@ -1,7 +1,7 @@
 import Constants from './logic/constants';
 
 const sumFor = (entries, address) => {
-    return entries.filter(e => e.address === address).reduce((a, e) => a + e.value, 0);
+    return entries.filter((e) => e.address === address).reduce((a, e) => a + e.value, 0);
 };
 
 /**
@@ -17,7 +17,7 @@ const toPaymentRows = (txs, wallets) => {
     txs.forEach((tx) => {
         wallets.forEach((wallet) => {
 
-            const touches = e => e.address === wallet.address;
+            const touches = (e) => e.address === wallet.address;
             if (!tx.inputs.some(touches) && !tx.outputs.some(touches)) return;
 
             const net = sumFor(tx.outputs, wallet.address) - sumFor(tx.inputs, wallet.address);

@@ -6,7 +6,7 @@ class Hasher {
 
         return new Promise((resolve, reject) => {
 
-            if (!password) reject('No value provided');
+            if (!password) reject(new Error('No value provided'));
 
             crypto.pbkdf2(password, Hasher.Salt, 2048, 48, Hasher.Algorithm, (err, data) => {
                 if (err) reject(err);

@@ -12,7 +12,6 @@ class CreateForm extends React.Component {
         };
         this.state = {
             confirmDirty: false,
-            autoCompleteResult: [],
         };
 
         this.checkConfirm = this.checkConfirm.bind(this);
@@ -21,7 +20,7 @@ class CreateForm extends React.Component {
     }
 
     checkPassword(rule, value, callback) {
-        const form = this.props.form;
+        const { form } = this.props;
         if (value && value !== form.getFieldValue('password')) {
             callback('Two passwords that you enter is inconsistent!');
         } else {
@@ -30,20 +29,23 @@ class CreateForm extends React.Component {
     }
 
     handleConfirmBlur(e) {
-        const value = e.target.value;
-        this.setState({ confirmDirty: this.state.confirmDirty || !!value });
+        const { value } = e.target;
+        const { confirmDirty } = this.state;
+        this.setState({ confirmDirty: confirmDirty || !!value });
     }
 
     checkConfirm(rule, value, callback) {
-        const form = this.props.form;
-        if (value && this.state.confirmDirty) {
+        const { form } = this.props;
+        const { confirmDirty } = this.state;
+        if (value && confirmDirty) {
             form.validateFields(['confirm'], { force: true });
         }
         callback();
     }
 
     render() {
-        const { getFieldDecorator } = this.props.form;
+        const { form } = this.props;
+        const { getFieldDecorator } = form;
         return (
             <Form layout="vertical">
                 <Form.Item>
