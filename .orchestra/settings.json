@@ -1,4 +1,5 @@
 {
+  "check": "npm run check",
   "check_timeout": "30m",
   "concurrent": 4,
   "mcp_servers": []
