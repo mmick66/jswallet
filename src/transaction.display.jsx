@@ -1,7 +1,10 @@
 import React from 'react';
-import { List } from 'antd';
+import { Listy } from 'antd';
 
-const describe = (entry) => `${entry.address || '(no address)'} ${entry.value}`;
+// Listy needs a key per row, and two entries can read the same
+const describe = (entries) => entries.map((entry, i) => ({ key: i, text: `${entry.address || '(no address)'} ${entry.value}` }));
+
+const renderEntry = (entry) => entry.text;
 
 class TransactionDisplay extends React.Component {
 
@@ -15,8 +18,8 @@ class TransactionDisplay extends React.Component {
         if (transaction) {
             this.state = {
                 hash: transaction.hash,
-                inputs: transaction.inputs.map(describe),
-                outputs: transaction.outputs.map(describe),
+                inputs: describe(transaction.inputs),
+                outputs: describe(transaction.outputs),
             };
         } else {
             this.state = {
@@ -37,22 +40,10 @@ class TransactionDisplay extends React.Component {
                 <h3>{ hash }</h3>
 
                 <h4>Inputs</h4>
-                <List
-                    size="small"
-                    header={<div>Header</div>}
-                    footer={<div>Footer</div>}
-                    bordered
-                    dataSource={inputs}
-                    renderItem={(item) => (<List.Item>{item}</List.Item>)} />
+                <Listy items={inputs} rowKey="key" itemRender={renderEntry} />
 
                 <h4>Outputs</h4>
-                <List
-                    size="small"
-                    header={<div>Header</div>}
-                    footer={<div>Footer</div>}
-                    bordered
-                    dataSource={outputs}
-                    renderItem={(item) => (<List.Item>{item}</List.Item>)} />
+                <Listy items={outputs} rowKey="key" itemRender={renderEntry} />
 
             </div>
 

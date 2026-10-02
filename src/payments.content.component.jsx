@@ -1,134 +1,103 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
-    Button, Icon, Table, Modal, message
+    App, Button, Table, Modal
 } from 'antd';
+import { ArrowLeftOutlined, ArrowRightOutlined } from '@ant-design/icons';
 
 import TransactionDisplay from './transaction.display';
 import toPaymentRows from './payments.rows';
 import jswallet from './jswallet';
 
-class PaymentsContent extends React.Component {
+const columns = [
+    { title: 'Wallet', dataIndex: 'name', key: 'name' },
+    {
+        title: 'Flow',
+        key: 'flow',
+        render: (record) => {
+            if (record.inflow) {
+                return (
+                    <span>
+                        <ArrowLeftOutlined />
+                        {' in'}
+                    </span>
+                );
+            }
+            return (
+                <span>
+                    {'out '}
+                    <ArrowRightOutlined />
+                </span>
+            );
+        }
+    },
+    { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
+    { title: 'Date', dataIndex: 'time', key: 'time' },
+];
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            payments: [],
-            selectedTransaction: null,
-            modalOpenTransactionDetails: false,
-        };
+function PaymentsContent() {
 
-        this.wallets = [];
+    const { message } = App.useApp();
 
-        this.showDetails = this.showDetails.bind(this);
-        this.handleOk = this.handleOk.bind(this);
-    }
+    const [transactions, setTransactions] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [selectedTransaction, setSelectedTransaction] = useState(null);
+    const [modalOpenTransactionDetails, setModalOpenTransactionDetails] = useState(false);
 
-    componentDidMount() {
+    useEffect(() => {
 
         jswallet.listWallets().then((wallets) => {
-
-            this.wallets = wallets;
-
             return jswallet.getTransactions(wallets.map((w) => w.address)).then((txs) => {
-                this.transactions = txs;
+                setTransactions(txs);
+                setPayments(toPaymentRows(txs, wallets));
             });
         }).catch((e) => {
             console.log(e);
             message.error('Could not load payments');
         });
-    }
+    }, [message]);
 
-
-    set transactions(txs) {
-
-        this._transactions = txs;
-
-        this.setState({
-            payments: toPaymentRows(txs, this.wallets),
-        });
-    }
-
-    get transactions() {
-        if (!this._transactions) this._transactions = [];
-        return this._transactions;
-    }
-
-    showDetails(record) {
-        const transaction = this.transactions.filter((t) => t.hash === record.hash)[0];
+    const showDetails = (record) => {
+        const transaction = transactions.filter((t) => t.hash === record.hash)[0];
         if (!transaction) {
             message.error('Cannot show details for this payment');
             return;
         }
-        this.setState({
-            selectedTransaction: transaction,
-            modalOpenTransactionDetails: true,
-        });
-    }
+        setSelectedTransaction(transaction);
+        setModalOpenTransactionDetails(true);
+    };
 
-    handleOk() {
-        this.setState({
-            modalOpenTransactionDetails: false,
-        });
-    }
+    const handleOk = () => {
+        setModalOpenTransactionDetails(false);
+    };
 
-    render() {
-
-        const { payments, modalOpenTransactionDetails, selectedTransaction } = this.state;
-
-        const columns = [
-            { title: 'Wallet', dataIndex: 'name', key: 'name' },
-            {
-                title: 'Flow',
-                render: (record) => {
-                    if (record.inflow) {
-                        return (
-                            <span>
-                                <Icon type="arrow-left" />
-                                {' in'}
-                            </span>
-                        );
-                    }
-                    return (
-                        <span>
-                            {'out '}
-                            <Icon type="arrow-right" />
-                        </span>
-                    );
-                }
-            },
-            { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
-            { title: 'Date', dataIndex: 'time', key: 'time' },
-        ];
-
-        const onRowFactory = (record) => {
-            const config = {};
-            config.onClick = () => {
-                this.showDetails(record);
-            };
-            return config;
+    const onRowFactory = (record) => {
+        const config = {};
+        config.onClick = () => {
+            showDetails(record);
         };
+        return config;
+    };
 
-        return (
-            <div>
-                <Table columns={columns}
-                       dataSource={payments}
-                       onRow={onRowFactory}
-                       pagination={false}
-                       style={{ height: '250px', backgroundColor: 'white' }} />
+    return (
+        <div>
+            <Table columns={columns}
+                   dataSource={payments}
+                   onRow={onRowFactory}
+                   pagination={false}
+                   style={{ height: '250px', backgroundColor: 'white' }} />
 
-                <Modal
-                    title="Transaction Details"
-                    visible={modalOpenTransactionDetails}
-                    okText="Copy"
-                    footer={[
-                        <Button key="back" onClick={this.handleOk}>Ok</Button>,
-                    ]}>
-                    <TransactionDisplay content={selectedTransaction} />
-                </Modal>
-            </div>
-        );
-    }
+            <Modal
+                title="Transaction Details"
+                open={modalOpenTransactionDetails}
+                onCancel={handleOk}
+                footer={[
+                    <Button key="back" onClick={handleOk}>Ok</Button>,
+                ]}>
+                <TransactionDisplay content={selectedTransaction} />
+            </Modal>
+        </div>
+    );
 }
 
 export default PaymentsContent;

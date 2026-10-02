@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { createElement } from 'react';
 
-import { Menu, Dropdown, Icon } from 'antd';
+import { Button, Dropdown } from 'antd';
+import { DownOutlined } from '@ant-design/icons';
 
 import {
     LineChart, Line, CartesianGrid, XAxis, YAxis
 } from 'recharts';
 
 import jswallet from './jswallet';
+
+// Each key is a timespan of jswallet.getPriceChart
+const timespans = [
+    { key: '30days', label: '30 days' },
+    { key: '90days', label: '90 days' },
+    { key: '1year', label: '1 year' },
+];
 
 class StatsContent extends React.Component {
 
@@ -47,41 +55,20 @@ class StatsContent extends React.Component {
     }
 
     onTimespanSelect({ key }) {
-        let tspan = '';
-        switch (key) {
-        case '1':
-            tspan = '30days';
-            break;
-        case '2':
-            tspan = '90days';
-            break;
-        case '3':
-            tspan = '1year';
-            break;
-        default: break;
-        }
-        this.loadPriceData(tspan);
+        this.loadPriceData(key);
     }
 
     render() {
 
         const { data } = this.state;
 
-        const timespan = (
-            <Menu onClick={this.onTimespanSelect}>
-                <Menu.Item key="1">30 days</Menu.Item>
-                <Menu.Item key="2">90 days</Menu.Item>
-                <Menu.Item key="3">1 year</Menu.Item>
-            </Menu>
-        );
         return (
             <div>
                 <div style={{ marginBottom: '18px' }}>
-                    <Dropdown overlay={timespan}>
-                        <a className="ant-dropdown-link">
-                            {'Time Period '}
-                            <Icon type="down" />
-                        </a>
+                    <Dropdown menu={{ items: timespans, onClick: this.onTimespanSelect }}>
+                        <Button type="link" icon={<DownOutlined />} iconPlacement="end">
+                            Time Period
+                        </Button>
                     </Dropdown>
                 </div>
 
@@ -93,10 +80,12 @@ class StatsContent extends React.Component {
                     margin={{
                         top: 5, right: 5, bottom: 5, left: 5
                     }}>
-                    <Line type="monotone" dataKey="price" stroke="#8884d8" />
-                    <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    {/* recharts 1 reads its children's defaultProps from their elements. React 19's JSX no longer
+                        puts them there, but createElement still does. Back to JSX with recharts 3 (jswallet-2cb.10). */}
+                    {createElement(Line, { type: 'monotone', dataKey: 'price', stroke: '#8884d8' })}
+                    {createElement(CartesianGrid, { stroke: '#ccc', strokeDasharray: '5 5' })}
+                    {createElement(XAxis, { dataKey: 'date' })}
+                    {createElement(YAxis)}
                 </LineChart>
             </div>
 

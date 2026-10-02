@@ -118,11 +118,6 @@ export default defineConfig([
             'react/prefer-stateless-function': 'off',
             'react/prop-types': 'off',
             'react/sort-comp': 'off',
-
-            // Fixing these changes the rendered markup (<a> without href, a clickable <span>). jswallet-2cb.9
-            // rewrites these components for React 19 and antd 6; turn them back to errors there.
-            'jsx-a11y/anchor-is-valid': 'warn',
-            'jsx-a11y/click-events-have-key-events': 'warn',
         },
     },
 ]);

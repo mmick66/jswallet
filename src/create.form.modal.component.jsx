@@ -1,95 +1,39 @@
 import React from 'react';
 
-import { Input, Form, Icon } from 'antd';
+import { Input, Form } from 'antd';
+import { LockOutlined, WalletOutlined } from '@ant-design/icons';
 
-class CreateForm extends React.Component {
+const iconStyle = { color: 'rgba(0,0,0,.25)' };
 
-    constructor(props) {
-        super(props);
-        this.icons = {
-            wallet: <Icon type="wallet" style={{ color: 'rgba(0,0,0,.25)' }} />,
-            lock: <Icon type="lock" style={{ color: 'rgba(0,0,0,.25)' }} />
-        };
-        this.state = {
-            confirmDirty: false,
-        };
+// Re-checked when the password changes (see dependencies)
+const matchesPassword = ({ getFieldValue }) => ({
+    validator(rule, value) {
+        if (!value || value === getFieldValue('password')) return Promise.resolve();
+        return Promise.reject(new Error('Two passwords that you enter is inconsistent!'));
+    },
+});
 
-        this.checkConfirm = this.checkConfirm.bind(this);
-        this.checkPassword = this.checkPassword.bind(this);
-        this.handleConfirmBlur = this.handleConfirmBlur.bind(this);
-    }
+/**
+ * @param form The instance from the parent's Form.useForm(), which validates and resets it
+ */
+function CreateForm({ form }) {
+    return (
+        <Form form={form} name="create-wallet" layout="vertical">
+            <Form.Item name="name" rules={[{ required: true, message: 'Please input a wallet name!' }]}>
+                <Input prefix={<WalletOutlined style={iconStyle} />} placeholder="Wallet Name" />
+            </Form.Item>
 
-    checkPassword(rule, value, callback) {
-        const { form } = this.props;
-        if (value && value !== form.getFieldValue('password')) {
-            callback('Two passwords that you enter is inconsistent!');
-        } else {
-            callback();
-        }
-    }
+            <Form.Item name="password" rules={[{ required: true, message: 'Please input your password!' }]}>
+                <Input prefix={<LockOutlined style={iconStyle} />} type="password" placeholder="Password" />
+            </Form.Item>
 
-    handleConfirmBlur(e) {
-        const { value } = e.target;
-        const { confirmDirty } = this.state;
-        this.setState({ confirmDirty: confirmDirty || !!value });
-    }
-
-    checkConfirm(rule, value, callback) {
-        const { form } = this.props;
-        const { confirmDirty } = this.state;
-        if (value && confirmDirty) {
-            form.validateFields(['confirm'], { force: true });
-        }
-        callback();
-    }
-
-    render() {
-        const { form } = this.props;
-        const { getFieldDecorator } = form;
-        return (
-            <Form layout="vertical">
-                <Form.Item>
-                    {getFieldDecorator('name', {
-                        rules: [{
-                            required: true, message: 'Please input your password!',
-                        }, {
-                            validator: this.checkConfirm,
-                        }],
-                    })(
-                        <Input prefix={this.icons.wallet} placeholder="Wallet Name" />
-                    )}
-                </Form.Item>
-
-                <Form.Item>
-                    {getFieldDecorator('password', {
-                        rules: [{
-                            required: true, message: 'Please input your password!',
-                        }, {
-                            validator: this.checkConfirm,
-                        }],
-                    })(
-                        <Input prefix={this.icons.lock} type="password" placeholder="Password" />
-                    )}
-                </Form.Item>
-
-                <Form.Item>
-                    {getFieldDecorator('confirm', {
-                        rules: [{
-                            required: true, message: 'Please confirm your password!',
-                        }, {
-                            validator: this.checkPassword,
-                        }],
-                    })(
-                        <Input prefix={this.icons.lock}
-                               type="password"
-                               placeholder="Confirm Password"
-                               onBlur={this.handleConfirmBlur} />
-                    )}
-                </Form.Item>
-
-            </Form>
-        );
-    }
+            <Form.Item name="confirm"
+                       dependencies={['password']}
+                       rules={[{ required: true, message: 'Please confirm your password!' }, matchesPassword]}>
+                <Input prefix={<LockOutlined style={iconStyle} />} type="password" placeholder="Confirm Password" />
+            </Form.Item>
+        </Form>
+    );
 }
 
-export default Form.create()(CreateForm);
+export default CreateForm;

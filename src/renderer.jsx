@@ -1,11 +1,15 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { App as AntApp } from 'antd';
 
-import 'antd/dist/antd.css';
+import 'antd/dist/reset.css';
 import './app.css';
 
 import App from './app';
 
-// The legacy root keeps antd 3 working on React 18; jswallet-2cb.9 moves to createRoot with React 19 and antd 6.
-// eslint-disable-next-line react/no-deprecated
-ReactDOM.render(<App />, document.getElementById('App'));
+// antd's App provides the message and modal hooks (App.useApp) with the theme's context.
+createRoot(document.getElementById('App')).render(
+    <AntApp>
+        <App />
+    </AntApp>
+);

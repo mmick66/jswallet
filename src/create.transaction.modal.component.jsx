@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { Input, Icon, Form } from 'antd';
+import { Input, Form } from 'antd';
+import { QrcodeOutlined, UnlockOutlined } from '@ant-design/icons';
 
 import Constants from './common/constants';
 import { isValidAddress } from './common/address';
@@ -10,173 +11,89 @@ import { amountError, toSatoshis } from './common/amount';
 // With a sign, so that a negative amount is refused as not more than zero rather than as not numeric
 const isValidNumber = (value) => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
+const iconStyle = { color: 'rgba(0,0,0,.25)' };
+
 // An empty address is left to the required rule
-const isValidBitcoinAddress = (rule, value, callback) => {
-    if (!value || isValidAddress(value)) callback();
-    else callback('Not a valid bitcoin address for this network');
+const isValidBitcoinAddress = (rule, value) => {
+    if (!value || isValidAddress(value)) return Promise.resolve();
+    return Promise.reject(new Error('Not a valid bitcoin address for this network'));
 };
 
-class CreateTransactionForm extends React.Component {
+/**
+ * Sends from the sender's wallet. The dollars and bitcoin fields hold the same amount; editing one
+ * updates the other, and the bitcoin field is the amount sent.
+ * @param form The instance from the parent's Form.useForm(), which validates it
+ * @param sender The wallet to send from: { name, address, network, coins, utxoValues }
+ * @param feeRate The network fee rate in sat/vB
+ * @param rate Bitcoins per dollar
+ */
+function CreateTransactionForm({
+    form, sender, feeRate, rate
+}) {
 
-    constructor(props) {
-        super(props);
+    // Read on each render, so that the checks use the current wallet, fee rate and rate
+    const bitcoinsPerDollar = rate || 1.0;
+    const toBitcoins = (dollars) => (dollars * bitcoinsPerDollar).toFixed(Constants.Bitcoin.Decimals);
 
-        this.rate = props.rate || 1.0;
-        this.feeRate = props.feeRate;
-        this.wallet = props.sender;
-
-        this.icons = {
-            qrcode: <Icon type="qrcode" style={{ color: 'rgba(0,0,0,.25)' }} />,
-            unlock: <Icon type="unlock" style={{ color: 'rgba(0,0,0,.25)' }} />,
-        };
-
-        this.convertDollarsToBitcoin = this.convertDollarsToBitcoin.bind(this);
-        this.convertBitcoinToDollars = this.convertBitcoinToDollars.bind(this);
-    }
+    // Watched so that the fee below the bitcoin field follows the amount
+    const bitcoin = Form.useWatch('bitcoin', form);
 
     // What Wallet.send spends for the amount: the fee for its inputs, and whether the funds cover it
-    planFor(btc) {
-        return planSpend(this.wallet.utxoValues, toSatoshis(btc), this.feeRate);
-    }
+    const planFor = (btc) => planSpend(sender.utxoValues, toSatoshis(btc), feeRate);
 
     // Why the amount in bitcoins cannot be sent: not more than zero, below the dust limit, or not covered
-    sendError(btc) {
-        return amountError(toSatoshis(btc)) || (this.planFor(btc).covered ? undefined : 'Not enough funds');
-    }
+    const sendError = (btc) => amountError(toSatoshis(btc)) || (planFor(btc).covered ? undefined : 'Not enough funds');
 
     // The fee for the inputs that the amount needs, or only the rate until the amount can be sent
-    describeFee() {
-        const { form } = this.props;
-        const btc = form.getFieldValue('bitcoin');
-        const rate = `${this.feeRate} sat/vB`;
-        if (!isValidNumber(btc) || amountError(toSatoshis(btc))) return `Network fee at ${rate}`;
+    const describeFee = () => {
+        const atRate = `at ${feeRate} sat/vB`;
+        if (!isValidNumber(bitcoin) || amountError(toSatoshis(bitcoin))) return `Network fee ${atRate}`;
 
-        const { fee, inputs } = this.planFor(btc);
+        const { fee, inputs } = planFor(bitcoin);
         const bitcoins = (fee / Constants.Bitcoin.Satoshis).toFixed(Constants.Bitcoin.Decimals);
-        return `Network fee: Ƀ ${bitcoins} for ${inputs} ${inputs === 1 ? 'input' : 'inputs'} at ${rate}`;
-    }
+        return `Network fee: Ƀ ${bitcoins} for ${inputs} ${inputs === 1 ? 'input' : 'inputs'} ${atRate}`;
+    };
 
-    convertDollarsToBitcoin(rule, stringValue, callback) {
+    // An empty amount is left to the required rule. The dollars field checks the bitcoins it puts in
+    // the bitcoin field, which is the amount sent.
+    const checkAmount = (toAmount) => (rule, value) => {
+        if (!value) return Promise.resolve();
+        if (!isValidNumber(value)) return Promise.reject(new Error('The value is not numeric'));
+        const error = sendError(toAmount(parseFloat(value)));
+        return error ? Promise.reject(new Error(error)) : Promise.resolve();
+    };
 
-        const { form } = this.props;
-
-        if (!isValidNumber(stringValue)) {
-            callback('The value is not numeric');
-            return;
+    const onValuesChange = (changed) => {
+        if (isValidNumber(changed.dollars)) {
+            form.setFieldsValue({ bitcoin: toBitcoins(parseFloat(changed.dollars)) });
+        } else if (isValidNumber(changed.bitcoin)) {
+            form.setFieldsValue({ dollars: (parseFloat(changed.bitcoin) / bitcoinsPerDollar).toFixed(2) });
         }
+    };
 
-        const value = parseFloat(stringValue);
+    return (
+        <Form form={form} name="send-payment" layout="vertical" onValuesChange={onValuesChange}>
+            <Form.Item name="address"
+                       rules={[{ required: true, message: 'Please input an address!' }, { validator: isValidBitcoinAddress }]}>
+                <Input placeholder="Receiver's Address" prefix={<QrcodeOutlined style={iconStyle} />} />
+            </Form.Item>
 
-        const bitcoin = (value * this.rate).toFixed(Constants.Bitcoin.Decimals);
+            <Form.Item name="dollars"
+                       rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount(toBitcoins) }]}>
+                <Input placeholder="Amount in Dollars" prefix="$" />
+            </Form.Item>
 
-        console.log({
-            value: value, bitcoin: bitcoin, feeRate: this.feeRate, coins: this.wallet.coins
-        });
+            <Form.Item name="bitcoin"
+                       extra={describeFee()}
+                       rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount((btc) => btc) }]}>
+                <Input placeholder="Amount in Bitcoin" prefix="Ƀ" />
+            </Form.Item>
 
-        // Also when it cannot be sent, so that both fields show the amount, and the fee below follows it
-        form.setFieldsValue({
-            bitcoin: bitcoin,
-        });
-
-        const error = this.sendError(bitcoin);
-        if (error) {
-            callback(error);
-            return;
-        }
-
-        callback();
-
-    }
-
-    convertBitcoinToDollars(rule, value, callback) {
-
-        const { form } = this.props;
-
-        if (!isValidNumber(value)) {
-            callback('The value is not numeric');
-            return;
-        }
-
-        // Also when it cannot be sent: on Send, the dollars check would put back the bitcoins of the old amount
-        form.setFieldsValue({
-            dollars: value / this.rate,
-        });
-
-        const error = this.sendError(value);
-        if (error) {
-            callback(error);
-            return;
-        }
-
-        callback();
-    }
-
-
-    render() {
-
-        const { form } = this.props;
-        const { getFieldDecorator } = form;
-
-
-        return (
-            <Form layout="vertical">
-                <Form.Item>
-                    {getFieldDecorator('address', {
-                        rules: [{
-                            required: true, message: 'Please input an address!',
-                        }, {
-                            validator: isValidBitcoinAddress,
-                        }],
-                    })(
-                        <Input placeholder="Receiver's Address" prefix={this.icons.qrcode} />
-                    )}
-
-                </Form.Item>
-
-                <Form.Item>
-
-                    {getFieldDecorator('dollars', {
-                        rules: [{
-                            required: true, message: 'Please input an address!',
-                        }, {
-                            validator: this.convertDollarsToBitcoin,
-                        }],
-                    })(
-                        <Input placeholder="Amount in Dollars" prefix="$" />
-                    )}
-
-                </Form.Item>
-
-                <Form.Item extra={this.describeFee()}>
-
-                    {getFieldDecorator('bitcoin', {
-                        rules: [{
-                            validator: this.convertBitcoinToDollars,
-                        }],
-                    })(
-                        <Input placeholder="Amount in Dollars"
-                               prefix="Ƀ" />
-                    )}
-
-
-                </Form.Item>
-
-                <Form.Item>
-
-                    {getFieldDecorator('password', {
-                        rules: [{
-                            required: true, message: 'Please input a password',
-                        }],
-                    })(
-                        <Input type="password" placeholder="Unlock" prefix={this.icons.unlock} />
-                    )}
-
-
-                </Form.Item>
-            </Form>
-
-        );
-    }
-
+            <Form.Item name="password" rules={[{ required: true, message: 'Please input a password' }]}>
+                <Input type="password" placeholder="Unlock" prefix={<UnlockOutlined style={iconStyle} />} />
+            </Form.Item>
+        </Form>
+    );
 }
-export default Form.create()(CreateTransactionForm);
+
+export default CreateTransactionForm;
