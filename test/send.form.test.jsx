@@ -175,12 +175,13 @@ describe('CreateTransactionForm', () => {
             const user = userEvent.setup();
             const { form } = renderForm();
 
-            // Ƀ 0.01 less the fee for one input and one output at 2 sat/vB: 384 satoshis
-            await user.type(field.bitcoin(), '0.00999616');
+            // Ƀ 0.01 less the fee for one input and the receiver's output at 2 sat/vB: 402 satoshis. Until an
+            // address is entered, the receiver's output counts as the largest kind (43 vB)
+            await user.type(field.bitcoin(), '0.00999598');
             expect((await validate(form)).errors).not.toHaveProperty('bitcoin');
 
             await user.clear(field.bitcoin());
-            await user.type(field.bitcoin(), '0.00999617');
+            await user.type(field.bitcoin(), '0.00999599');
             expect((await validate(form)).errors.bitcoin).toEqual([Errors.NotEnough]);
         });
     });
@@ -202,11 +203,11 @@ describe('CreateTransactionForm', () => {
             renderForm({ sender: SPLIT });
 
             await user.type(field.bitcoin(), '0.005');
-            expect(screen.getByText('Network fee: Ƀ 0.00000452 for 1 input at 2 sat/vB')).toBeTruthy();
+            expect(screen.getByText('Network fee: Ƀ 0.00000470 for 1 input at 2 sat/vB')).toBeTruthy();
 
             await user.clear(field.bitcoin());
             await user.type(field.bitcoin(), '0.01');
-            expect(screen.getByText('Network fee: Ƀ 0.00000748 for 2 inputs at 2 sat/vB')).toBeTruthy();
+            expect(screen.getByText('Network fee: Ƀ 0.00000766 for 2 inputs at 2 sat/vB')).toBeTruthy();
         });
     });
 
@@ -233,9 +234,10 @@ describe('CreateTransactionForm', () => {
             await user.type(field.bitcoin(), '0.0099');
             expect((await validate(form)).errors).not.toHaveProperty('bitcoin');
 
-            // 452 satoshis at 2 sat/vB leave change, 22,600 at 100 sat/vB are more than the balance holds
+            // 470 satoshis at 2 sat/vB leave change; at 100 sat/vB even the 20,100 without change are more than
+            // the 10,000 the balance has to spare
             rerender({ feeRate: 100 });
-            expect(screen.getByText('Network fee: Ƀ 0.00019200 for 1 input at 100 sat/vB')).toBeTruthy();
+            expect(screen.getByText('Network fee: Ƀ 0.00020100 for 1 input at 100 sat/vB')).toBeTruthy();
             expect((await validate(form)).errors.bitcoin).toEqual([Errors.NotEnough]);
         });
 
