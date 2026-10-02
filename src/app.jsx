@@ -13,7 +13,9 @@ class App extends React.Component {
         return (
             <Layout>
                 <Header className="Header">
-                    <img style={{ marginTop: '10px', height: '40px', width: 'auto', float: 'left', marginRight: '18px' }}
+                    <img style={{
+                        marginTop: '10px', height: '40px', width: 'auto', float: 'left', marginRight: '18px'
+                    }}
                          src="./images/planet.png"
                          alt="Bitcoin Logo" />
 
@@ -22,13 +24,34 @@ class App extends React.Component {
                 <Content>
                     <div className="App">
                         <Tabs defaultActiveKey="2" style={{ padding: '16px' }}>
-                            <Tabs.TabPane tab={<span><Icon type="line-chart" />Price Charts</span>} key="1">
+                            <Tabs.TabPane
+                                tab={(
+                                    <span>
+                                        <Icon type="line-chart" />
+                                        Price Charts
+                                    </span>
+                                )}
+                                key="1">
                                 <StatsContent />
                             </Tabs.TabPane>
-                            <Tabs.TabPane tab={<span><Icon type="wallet" />Wallets</span>} key="2">
+                            <Tabs.TabPane
+                                tab={(
+                                    <span>
+                                        <Icon type="wallet" />
+                                        Wallets
+                                    </span>
+                                )}
+                                key="2">
                                 <WalletsContent />
                             </Tabs.TabPane>
-                            <Tabs.TabPane tab={<span><Icon type="credit-card" />Payments</span>} key="3">
+                            <Tabs.TabPane
+                                tab={(
+                                    <span>
+                                        <Icon type="credit-card" />
+                                        Payments
+                                    </span>
+                                )}
+                                key="3">
                                 <TransactionsContent />
                             </Tabs.TabPane>
                         </Tabs>

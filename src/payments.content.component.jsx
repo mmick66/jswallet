@@ -1,7 +1,8 @@
 import React from 'react';
-import Datastore from 'nedb';
 
-import { Button, Icon, Table, Modal, message } from 'antd';
+import {
+    Button, Icon, Table, Modal, message
+} from 'antd';
 
 import TransactionDisplay from './transaction.display';
 import Wallet from './logic/wallet.class';
@@ -21,8 +22,6 @@ class PaymentsContent extends React.Component {
 
         this.showDetails = this.showDetails.bind(this);
         this.handleOk = this.handleOk.bind(this);
-
-        this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
     }
 
     componentDidMount() {
@@ -31,7 +30,7 @@ class PaymentsContent extends React.Component {
 
             this.wallets = wallets;
 
-            net.api.getTransactions(wallets.map(w => w.address)).then((txs) => {
+            net.api.getTransactions(wallets.map((w) => w.address)).then((txs) => {
                 console.log(txs);
                 this.transactions = txs;
             });
@@ -82,7 +81,7 @@ class PaymentsContent extends React.Component {
     }
 
     showDetails(record) {
-        const transaction = this.transactions.filter(t => t.hash === record.hash)[0];
+        const transaction = this.transactions.filter((t) => t.hash === record.hash)[0];
         if (!transaction) {
             message.error('Cannot show details for this payment');
             return;
@@ -101,14 +100,28 @@ class PaymentsContent extends React.Component {
 
     render() {
 
+        const { payments, modalOpenTransactionDetails, selectedTransaction } = this.state;
+
         const columns = [
             { title: 'Wallet', dataIndex: 'name', key: 'name' },
-            { title: 'Flow', render: (record) => {
-                if (record.inflow) {
-                    return <span><Icon type={'arrow-left'} /> in</span>;
+            {
+                title: 'Flow',
+                render: (record) => {
+                    if (record.inflow) {
+                        return (
+                            <span>
+                                <Icon type="arrow-left" />
+                                {' in'}
+                            </span>
+                        );
+                    }
+                    return (
+                        <span>
+                            {'out '}
+                            <Icon type="arrow-right" />
+                        </span>
+                    );
                 }
-                return <span>out <Icon type={'arrow-right'} /></span>;
-            }
             },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
             { title: 'Date', dataIndex: 'time', key: 'time' },
@@ -125,19 +138,19 @@ class PaymentsContent extends React.Component {
         return (
             <div>
                 <Table columns={columns}
-                       dataSource={this.state.payments}
+                       dataSource={payments}
                        onRow={onRowFactory}
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
 
                 <Modal
                     title="Transaction Details"
-                    visible={this.state.modalOpenTransactionDetails}
+                    visible={modalOpenTransactionDetails}
                     okText="Copy"
                     footer={[
                         <Button key="back" onClick={this.handleOk}>Ok</Button>,
                     ]}>
-                    <TransactionDisplay content={this.state.selectedTransaction} />
+                    <TransactionDisplay content={selectedTransaction} />
                 </Modal>
             </div>
         );

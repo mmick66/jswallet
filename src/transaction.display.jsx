@@ -13,8 +13,8 @@ class TransactionDisplay extends React.Component {
         if (transaction) {
             this.state = {
                 hash: transaction.hash,
-                inputs: transaction.inputs.filter(i => i.prev_out).map(po => `${po.addr} ${po.value}`),
-                outputs: transaction.out.map(o => `${o.addr} ${o.value}`),
+                inputs: transaction.inputs.filter((i) => i.prev_out).map((po) => `${po.addr} ${po.value}`),
+                outputs: transaction.out.map((o) => `${o.addr} ${o.value}`),
             };
         } else {
             this.state = {
@@ -28,10 +28,11 @@ class TransactionDisplay extends React.Component {
 
     render() {
 
+        const { hash, inputs, outputs } = this.state;
 
         return (
             <div>
-                <h3>{ this.state.hash }</h3>
+                <h3>{ hash }</h3>
 
                 <h4>Inputs</h4>
                 <List
@@ -39,8 +40,8 @@ class TransactionDisplay extends React.Component {
                     header={<div>Header</div>}
                     footer={<div>Footer</div>}
                     bordered
-                    dataSource={this.state.inputs}
-                    renderItem={item => (<List.Item>{item}</List.Item>)} />
+                    dataSource={inputs}
+                    renderItem={(item) => (<List.Item>{item}</List.Item>)} />
 
                 <h4>Outputs</h4>
                 <List
@@ -48,8 +49,8 @@ class TransactionDisplay extends React.Component {
                     header={<div>Header</div>}
                     footer={<div>Footer</div>}
                     bordered
-                    dataSource={this.state.outputs}
-                    renderItem={item => (<List.Item>{item}</List.Item>)} />
+                    dataSource={outputs}
+                    renderItem={(item) => (<List.Item>{item}</List.Item>)} />
 
             </div>
 

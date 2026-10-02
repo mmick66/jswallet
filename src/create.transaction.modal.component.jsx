@@ -1,12 +1,11 @@
 import React from 'react';
 
 import { Input, Icon, Form } from 'antd';
+import bs58 from 'bs58';
 
 import Constants from './logic/constants';
 
-const bs58 = require('bs58');
-
-const isValidNumber = value => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
+const isValidNumber = (value) => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
 const isValidBitcoinAddress = (rule, value, callback) => {
     try {
@@ -26,11 +25,6 @@ class CreateTransactionForm extends React.Component {
         this.fees = props.fees || 0.0;
         this.wallet = props.sender;
 
-        this.state = {
-            amountInDollars: 0.0,
-            amountInBitcoin: 0.0
-        };
-
         this.icons = {
             qrcode: <Icon type="qrcode" style={{ color: 'rgba(0,0,0,.25)' }} />,
             unlock: <Icon type="unlock" style={{ color: 'rgba(0,0,0,.25)' }} />,
@@ -42,7 +36,7 @@ class CreateTransactionForm extends React.Component {
 
     convertDollarsToBitcoin(rule, stringValue, callback) {
 
-        const form = this.props.form;
+        const { form } = this.props;
 
         if (!isValidNumber(stringValue)) {
             callback('The value is not numeric');
@@ -53,7 +47,9 @@ class CreateTransactionForm extends React.Component {
 
         const bitcoin = value * this.rate;
 
-        console.log({ value: value, bitcoin: bitcoin, fees: this.fees, coins: this.wallet.coins });
+        console.log({
+            value: value, bitcoin: bitcoin, fees: this.fees, coins: this.wallet.coins
+        });
 
         if (bitcoin + this.fees >= this.wallet.coins) {
             callback('Not enough funds');
@@ -70,7 +66,7 @@ class CreateTransactionForm extends React.Component {
 
     convertBitcoinToDollars(rule, value, callback) {
 
-        const form = this.props.form;
+        const { form } = this.props;
 
         if (!isValidNumber(value)) {
             callback('The value is not numeric');
@@ -92,7 +88,8 @@ class CreateTransactionForm extends React.Component {
 
     render() {
 
-        const { getFieldDecorator } = this.props.form;
+        const { form } = this.props;
+        const { getFieldDecorator } = form;
 
 
         return (
@@ -119,7 +116,7 @@ class CreateTransactionForm extends React.Component {
                             validator: this.convertDollarsToBitcoin,
                         }],
                     })(
-                        <Input placeholder="Amount in Dollars" prefix={'$'} />
+                        <Input placeholder="Amount in Dollars" prefix="$" />
                     )}
 
                 </Form.Item>
@@ -132,7 +129,7 @@ class CreateTransactionForm extends React.Component {
                         }],
                     })(
                         <Input placeholder="Amount in Dollars"
-                               prefix={'Ƀ'} />
+                               prefix="Ƀ" />
                     )}
 
 

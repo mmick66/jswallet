@@ -1,6 +1,8 @@
 import React from 'react';
 
-import { Button, Table, Modal, message, Popconfirm } from 'antd';
+import {
+    Button, Table, Modal, message, Popconfirm
+} from 'antd';
 
 import { clipboard } from 'electron';
 
@@ -79,7 +81,8 @@ class WalletsContent extends React.Component {
 
             wallets.forEach((w) => {
                 w.on(Wallet.Events.Updated, () => {
-                    const newTotal = this.state.wallets.reduce((a, c) => a + c.coins, 0);
+                    const { wallets: current } = this.state;
+                    const newTotal = current.reduce((a, c) => a + c.coins, 0);
                     this.setState({ total: newTotal });
                 });
                 w.update();
@@ -111,8 +114,9 @@ class WalletsContent extends React.Component {
 
     __addWallet(wallet, mnemonic) {
 
+        const { wallets } = this.state;
         this.setState({
-            wallets: this.state.wallets.concat([wallet]),
+            wallets: wallets.concat([wallet]),
         });
 
         wallet.save().then(() => {
@@ -141,14 +145,13 @@ class WalletsContent extends React.Component {
 
             this.setState({ modalOpenSend: false });
 
-            if (!this.state.sourceWallet.matches(values.password)) {
+            const { sourceWallet } = this.state;
+            if (!sourceWallet.matches(values.password)) {
                 message.error('Wrong password entered.');
                 return;
             }
 
-            this.state.sourceWallet.send(
-                values.bitcoin, values.address, this.fee, values.password
-            ).then(() => {
+            sourceWallet.send(values.bitcoin, values.address, this.fee, values.password).then(() => {
                 message.success(Constants.Messages.Transactions.Sent);
                 this.handleReload();
             }, (e) => {
@@ -178,13 +181,18 @@ class WalletsContent extends React.Component {
     }
 
     handleReload() {
-        this.state.wallets.forEach(w => w.update());
+        const { wallets } = this.state;
+        wallets.forEach((w) => w.update());
     }
 
 
 
 
     render() {
+
+        const {
+            modalOpenCreate, modalOpenSend, sendingPayment, sourceWallet, wallets, price, total
+        } = this.state;
 
         const openSendModal = (event, record) => {
             event.stopPropagation();
@@ -196,8 +204,9 @@ class WalletsContent extends React.Component {
 
         const onDeleteRow = (event, record) => {
             event.stopPropagation();
+            const { wallets: current } = this.state;
             this.setState({
-                wallets: this.state.wallets.filter(w => w !== record)
+                wallets: current.filter((w) => w !== record)
             });
             record.erase();
 
@@ -211,26 +220,37 @@ class WalletsContent extends React.Component {
 
         const columns = [
             { title: 'Name', dataIndex: 'name', key: 'name' },
-            { title: 'Address', key: 'address', render: (r) => {
-                return (
+            {
+                title: 'Address',
+                key: 'address',
+                render: (r) => {
+                    return (
                         <span tabIndex={0}
                               role="button"
                               style={{ cursor: 'copy' }}
-                              onClick={e => onAddressClick(e, r)}>{r.address}</span>
+                              onClick={(e) => onAddressClick(e, r)}>
+                            {r.address}
+                        </span>
                     );
                 }
             },
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
-            { title: 'Send', key: 'send', render: (r) => {
-                return (
-                        <Button disabled={this.fees > 0} onClick={e => openSendModal(e, r)} icon="login" />
+            {
+                title: 'Send',
+                key: 'send',
+                render: (r) => {
+                    return (
+                        <Button disabled={this.fees > 0} onClick={(e) => openSendModal(e, r)} icon="login" />
                     );
                 }
             },
-            { title: 'Action', key: 'action', render: (r) => {
-                return (
+            {
+                title: 'Action',
+                key: 'action',
+                render: (r) => {
+                    return (
                         <Popconfirm title="Sure to delete?"
-                                    onConfirm={e => onDeleteRow(e, r)}>
+                                    onConfirm={(e) => onDeleteRow(e, r)}>
                             <a>Delete</a>
                         </Popconfirm>
                     );
@@ -244,13 +264,15 @@ class WalletsContent extends React.Component {
                     <Button
                       type="primary"
                       icon="down-square-o"
-                      onClick={() => this.setState({ modalOpenCreate: true, })}>Import
+                      onClick={() => this.setState({ modalOpenCreate: true, })}>
+                        Import
                     </Button>
                     <Button
                       type="primary"
                       icon="plus-circle-o"
                       style={{ marginLeft: '8px' }}
-                      onClick={() => this.setState({ modalOpenCreate: true, })}>Create
+                      onClick={() => this.setState({ modalOpenCreate: true, })}>
+                        Create
                     </Button>
                     <Button type="primary"
                             shape="circle"
@@ -260,38 +282,41 @@ class WalletsContent extends React.Component {
                 </div>
                 <Modal
                   title="Create a New Wallet"
-                  visible={this.state.modalOpenCreate}
+                  visible={modalOpenCreate}
                   okText="Create"
                   onCancel={this.handleCancel}
                   onOk={this.handleCreate}>
                     <CreateForm
-                        ref={form => (this.form = form)}
+                        ref={(form) => (this.form = form)}
                         handleCreate={this.handleCreate} />
                 </Modal>
 
 
                 <Table columns={columns}
-                       dataSource={this.state.wallets}
+                       dataSource={wallets}
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
 
                 <Modal
                     title="Send Money"
-                    visible={this.state.modalOpenSend}
+                    visible={modalOpenSend}
                     okText="Send"
                     onCancel={this.handleCancel}
-                    confirmLoading={this.state.sendingPayment}
+                    confirmLoading={sendingPayment}
                     onOk={this.handleSendit}>
                     <CreateTransaction
-                        ref={form => (this.form = form)}
-                        sender={this.state.sourceWallet}
+                        ref={(form) => (this.form = form)}
+                        sender={sourceWallet}
                         fees={this.fee}
-                        rate={1.0 / this.state.price} />
+                        rate={1.0 / price} />
                 </Modal>
 
                 <div style={{ marginTop: '24px' }}>
-                    <h3>Total: {`${formatAmount(this.state.total * this.state.price)}` }</h3>
-                    <span>{`(at ${formatAmount(this.state.price)} per BTC)`}</span>
+                    <h3>
+                        {'Total: '}
+                        {`${formatAmount(total * price)}` }
+                    </h3>
+                    <span>{`(at ${formatAmount(price)} per BTC)`}</span>
                 </div>
             </div>
         );

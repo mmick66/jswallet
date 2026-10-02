@@ -1,5 +1,4 @@
 import Datastore from 'nedb';
-import Wallet from './wallet.class';
 
 
 class Database {

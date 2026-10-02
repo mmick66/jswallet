@@ -27,7 +27,7 @@ default:
     throw new Error('Unknown network in env file');
 }
 
-const getPrice = currency => c_exchange.getTicker({ currency: currency || 'USD' });
+const getPrice = (currency) => c_exchange.getTicker({ currency: currency || 'USD' });
 
 const getFee = () => {
     return axios.get(Constants.Endpoints.BitcoinFees).then((response) => {
@@ -37,7 +37,7 @@ const getFee = () => {
     });
 };
 
-const broadcast = tx => c_pushtx(tx).then(result => result === Constants.ReturnValues.TransactionSubmitted);
+const broadcast = (tx) => c_pushtx(tx).then((result) => result === Constants.ReturnValues.TransactionSubmitted);
 
 const getUnspentOutputs = (address) => {
     return c_blockexplorer.getUnspentOutputs(address).then((result) => {

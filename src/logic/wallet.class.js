@@ -140,7 +140,7 @@ class Wallet extends EventEmitter {
 
     static all() {
         return Wallet.store.find({ network: bnet.name }).then((docs) => {
-            return docs.map(doc => new Wallet(doc));
+            return docs.map((doc) => new Wallet(doc));
         });
     }
 
