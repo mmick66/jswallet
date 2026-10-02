@@ -1,12 +1,14 @@
-import { afterEach, beforeEach, expect, vi } from 'vitest';
+import {
+    afterAll, afterEach, beforeEach, expect, vi,
+} from 'vitest';
 import { cleanup, configure } from '@testing-library/react';
 
 /**
  * For test files that render antd components under // @vitest-environment jsdom.
  * Adds what antd reads from the browser and jsdom lacks, gives the tests and their waits more time,
- * unmounts after each test (Testing Library cleans up on its own only with Vitest's globals), and
- * fails a test that logs a warning or an error, such as React's act() warnings or antd's deprecation
- * notices.
+ * unmounts after each test (Testing Library cleans up on its own only with Vitest's globals), lets
+ * antd's last timers run before jsdom goes away, and fails a test that logs a warning or an error, such
+ * as React's act() warnings or antd's deprecation notices.
  */
 
 // The findBy queries and waitFor give up after 1 second by default and Vitest's tests after 5, too
@@ -45,3 +47,11 @@ afterEach(() => {
     vi.restoreAllMocks();
     expect(logged).toEqual([]);
 });
+
+// antd's Form debounces a field's errors with timers of up to 10 ms (useDebounce, through useDelayState
+// of @rc-component/util) that unmounting does not cancel. When a file's last test changes a field's
+// errors, such a timer can fire after Vitest has torn jsdom down: React reads window.event for the update
+// it would drop anyway, throws 'window is not defined' and Vitest reports an unhandled error although
+// every test passed (jswallet-a6n). Node runs timers in the order they expire, so one wait per file that
+// ends later than theirs lets them run while the window is still there.
+afterAll(() => new Promise((resolve) => { setTimeout(resolve, 20); }));
