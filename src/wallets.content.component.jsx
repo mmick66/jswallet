@@ -145,9 +145,8 @@ function WalletsContent() {
                 modal.error(info);
             });
 
-        }, (e) => {
-            console.log(e);
-            message.error('Bad format for password entered');
+        }, () => {
+            // The form shows what is wrong
         });
 
 
