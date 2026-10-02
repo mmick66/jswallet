@@ -5,7 +5,9 @@ import { Input, Icon, Form } from 'antd';
 import Constants from './common/constants';
 import { isValidAddress } from './common/address';
 import { planSpend } from './common/fee';
+import { amountError, toSatoshis } from './common/amount';
 
+// With a sign, so that a negative amount is refused as not more than zero rather than as not numeric
 const isValidNumber = (value) => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
 // An empty address is left to the required rule
@@ -34,15 +36,20 @@ class CreateTransactionForm extends React.Component {
 
     // What Wallet.send spends for the amount: the fee for its inputs, and whether the funds cover it
     planFor(btc) {
-        return planSpend(this.wallet.utxoValues, Math.round(Number(btc) * Constants.Bitcoin.Satoshis), this.feeRate);
+        return planSpend(this.wallet.utxoValues, toSatoshis(btc), this.feeRate);
     }
 
-    // The fee for the inputs that the amount needs, or only the rate until there is an amount
+    // Why the amount in bitcoins cannot be sent: not more than zero, below the dust limit, or not covered
+    sendError(btc) {
+        return amountError(toSatoshis(btc)) || (this.planFor(btc).covered ? undefined : 'Not enough funds');
+    }
+
+    // The fee for the inputs that the amount needs, or only the rate until the amount can be sent
     describeFee() {
         const { form } = this.props;
         const btc = form.getFieldValue('bitcoin');
         const rate = `${this.feeRate} sat/vB`;
-        if (!isValidNumber(btc) || !(Number(btc) > 0)) return `Network fee at ${rate}`;
+        if (!isValidNumber(btc) || amountError(toSatoshis(btc))) return `Network fee at ${rate}`;
 
         const { fee, inputs } = this.planFor(btc);
         const bitcoins = (fee / Constants.Bitcoin.Satoshis).toFixed(Constants.Bitcoin.Decimals);
@@ -66,13 +73,14 @@ class CreateTransactionForm extends React.Component {
             value: value, bitcoin: bitcoin, feeRate: this.feeRate, coins: this.wallet.coins
         });
 
-        // Also when the funds do not cover it, so that the fee below is the one for this amount
+        // Also when it cannot be sent, so that both fields show the amount, and the fee below follows it
         form.setFieldsValue({
             bitcoin: bitcoin,
         });
 
-        if (!this.planFor(bitcoin).covered) {
-            callback('Not enough funds');
+        const error = this.sendError(bitcoin);
+        if (error) {
+            callback(error);
             return;
         }
 
@@ -89,14 +97,16 @@ class CreateTransactionForm extends React.Component {
             return;
         }
 
-        if (!this.planFor(value).covered) {
-            callback('Not enough funds');
-            return;
-        }
-
+        // Also when it cannot be sent: on Send, the dollars check would put back the bitcoins of the old amount
         form.setFieldsValue({
             dollars: value / this.rate,
         });
+
+        const error = this.sendError(value);
+        if (error) {
+            callback(error);
+            return;
+        }
 
         callback();
     }

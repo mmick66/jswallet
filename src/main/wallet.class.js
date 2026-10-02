@@ -5,6 +5,7 @@ import cipher from './cipher';
 import bitcoin, { bip32, ECPair } from '../common/bitcoin';
 import { isValidAddress } from '../common/address';
 import { planSpend } from '../common/fee';
+import { amountError } from '../common/amount';
 
 import bnet from './network';
 import Database from './database';
@@ -142,7 +143,8 @@ class Wallet {
         const amount = toSatoshis(btc, 'amount');
 
         if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error(`Not a valid fee rate in sat/vB: ${rate}`);
-        if (amount === 0n) throw new Error('The amount must be more than zero');
+        const tooSmall = amountError(Number(amount));
+        if (tooSmall) throw new Error(tooSmall);
         if (!isValidAddress(address)) throw new Error(`Not a valid ${bnet.name} address: ${address}`);
 
         const values = this.utxos.map((utxo) => utxo.value);
