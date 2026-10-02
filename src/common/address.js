@@ -1,5 +1,5 @@
 import bitcoin from './bitcoin';
-import bnet from './network';
+import chain from './chain';
 
 /**
  * Whether bitcoins can be sent to the address on the configured network.
@@ -11,7 +11,7 @@ import bnet from './network';
 export const isValidAddress = (address) => {
     if (typeof address !== 'string') return false;
     try {
-        bitcoin.address.toOutputScript(address, bnet.current);
+        bitcoin.address.toOutputScript(address, chain.current);
         return true;
     } catch (e) {
         return false;

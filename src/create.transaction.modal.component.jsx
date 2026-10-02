@@ -2,8 +2,8 @@ import React from 'react';
 
 import { Input, Icon, Form } from 'antd';
 
-import Constants from './logic/constants';
-import { isValidAddress } from './logic/address';
+import Constants from './common/constants';
+import { isValidAddress } from './common/address';
 
 const isValidNumber = (value) => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 

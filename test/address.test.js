@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isValidAddress } from '../src/logic/address';
+import { isValidAddress } from '../src/common/address';
 
 const TESTNET = {
     P2PKH: 'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r',
@@ -59,7 +59,7 @@ describe('isValidAddress on mainnet', () => {
         vi.doMock('../src/env.json', () => ({
             default: { network: 'bitcoin', apiBase: { bitcoin: 'https://mempool.space/api' } },
         }));
-        return import('../src/logic/address').then(m => m.isValidAddress);
+        return import('../src/common/address').then(m => m.isValidAddress);
     };
 
     it('accepts mainnet and rejects testnet addresses', async () => {

@@ -26,9 +26,44 @@ export default defineConfig([
     // Electron main process and the wallet logic run on Node.
     {
         name: 'jswallet/node',
-        files: ['src/index.js', 'src/logic/**'],
+        files: ['src/index.js', 'src/main/**'],
         languageOptions: {
             globals: globals.node,
+        },
+    },
+
+    // The renderer is a browser bundle in a sandboxed, context-isolated window. It reaches the main
+    // process only through window.jswallet (src/preload.js), so nothing it imports may need Node,
+    // Electron or src/main. Shared modules in src/common follow the same rules.
+    {
+        name: 'jswallet/renderer-imports',
+        files: ['src/**'],
+        ignores: ['src/index.js', 'src/main/**', 'src/preload.js'],
+        rules: {
+            'import-x/no-nodejs-modules': 'error',
+            'no-restricted-imports': ['error', {
+                paths: [
+                    { name: 'electron', message: 'The renderer reaches the main process through window.jswallet (src/jswallet.js).' },
+                    { name: '@seald-io/nedb', message: 'The database is in the main process (src/main).' },
+                ],
+                patterns: [
+                    { regex: '(^|/)main(/|$)', message: 'src/main runs in the main process; call it through window.jswallet (src/jswallet.js).' },
+                ],
+            }],
+        },
+    },
+
+    // Sandboxed preloads can only load electron and a few polyfilled modules; Vite bundles the rest.
+    {
+        name: 'jswallet/preload-imports',
+        files: ['src/preload.js'],
+        rules: {
+            'import-x/no-nodejs-modules': 'error',
+            'no-restricted-imports': ['error', {
+                patterns: [
+                    { regex: '(^|/)main(/|$)', message: 'src/main runs in the main process; add an IPC channel instead.' },
+                ],
+            }],
         },
     },
 

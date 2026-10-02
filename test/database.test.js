@@ -2,7 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import Database from '../src/logic/database';
+import Database from '../src/main/database';
 
 // Written by nedb 1.8.0, as the old app did: four inserts, then a remove,
 // which nedb 1.x appends as a {"$$deleted":true} line.

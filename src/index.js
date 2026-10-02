@@ -1,8 +1,13 @@
 /* global MAIN_WINDOW_VITE_DEV_SERVER_URL, MAIN_WINDOW_VITE_NAME */
-import { app, BrowserWindow } from 'electron';
+import {
+    app, BrowserWindow, clipboard, ipcMain
+} from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import Wallet from './main/wallet.class';
+import { createIpcHandlers, registerIpcHandlers } from './main/ipc';
+import { databaseDirectory, migrateLegacyDatabase } from './main/storage';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -28,8 +33,11 @@ const createWindow = () => {
     mainWindow = new BrowserWindow({
         width: 800,
         height: 600,
+        // The renderer gets no Node: it reaches the wallets through window.jswallet (src/preload.js)
         webPreferences: {
-            nodeIntegration: true
+            preload: path.join(__dirname, 'preload.cjs'),
+            contextIsolation: true,
+            sandbox: true,
         }
     });
 
@@ -56,6 +64,14 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+    const dbDir = databaseDirectory(app.getPath('userData'));
+    migrateLegacyDatabase(Wallet.Defaults.DBFileName, dbDir);
+    Wallet.open(dbDir);
+
+    registerIpcHandlers(ipcMain, createIpcHandlers({
+        writeClipboard: (text) => clipboard.writeText(text),
+    }));
+
     if (!app.isPackaged) {
         await installDevTools();
     }

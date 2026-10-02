@@ -2,9 +2,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import cipher from '../src/logic/cipher';
-import Database from '../src/logic/database';
-import Wallet from '../src/logic/wallet.class';
+import cipher from '../src/main/cipher';
+import Database from '../src/main/database';
+import Wallet from '../src/main/wallet.class';
 
 // Testnet WIF of private key 1 and its address
 const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';

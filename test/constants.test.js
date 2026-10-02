@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import Constants from '../src/logic/constants';
+import Constants from '../src/common/constants';
 
 describe('constants', () => {
     it('defines one bitcoin as 10^8 satoshis', () => {

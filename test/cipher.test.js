@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import cipher from '../src/logic/cipher';
+import cipher from '../src/main/cipher';
 
 // Testnet WIF of private key 1
 const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';

@@ -1,21 +1,8 @@
-import { networks } from 'bitcoinjs-lib';
 import axios from 'axios';
-import Constants from './constants';
+import Constants from '../common/constants';
+import chain from '../common/chain';
 import env from '../env.json';
 
-
-let c_network;
-
-switch (env.network) {
-case Constants.Networks.Testnet:
-    c_network = networks.testnet;
-    break;
-case Constants.Networks.Bitcoin:
-    c_network = networks.bitcoin;
-    break;
-default:
-    throw new Error('Unknown network in env file');
-}
 
 // Esplora REST API (mempool.space) for the configured network
 const c_apiBase = env.apiBase && env.apiBase[env.network];
@@ -80,7 +67,7 @@ const getPrice = (currency = 'USD') => get(Constants.Endpoints.Prices).then((pri
  * @returns {Promise<Array<{time: number, price: number}>>} Daily USD prices, time in seconds
  */
 const getPriceChart = (timespan) => get(Constants.Endpoints.PriceChart, {
-    // cors=true makes blockchain.info send the CORS headers a browser renderer needs
+    // cors=true asks for the CORS headers that the renderer needed when it made this call; main does not need them
     params: { timespan: timespan, format: 'json', cors: true },
 }).then((chart) => chart.values.map((point) => ({ time: point.x, price: point.y })));
 
@@ -129,8 +116,8 @@ const getTransactions = (addresses) => {
 
 
 export default {
-    current: c_network,
-    name: env.network,
+    current: chain.current,
+    name: chain.name,
     api: {
         getPrice: getPrice,
         getPriceChart: getPriceChart,

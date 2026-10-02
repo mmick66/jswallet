@@ -12,7 +12,7 @@ const ENV = {
 const load = (network) => {
     vi.resetModules();
     vi.doMock('../src/env.json', () => ({ default: { ...ENV, network: network } }));
-    return import('../src/logic/wallet.class').then(m => m.default);
+    return import('../src/main/wallet.class').then(m => m.default);
 };
 
 describe('Wallet.create', () => {

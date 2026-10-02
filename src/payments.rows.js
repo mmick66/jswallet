@@ -1,4 +1,4 @@
-import Constants from './logic/constants';
+import Constants from './common/constants';
 
 const sumFor = (entries, address) => {
     return entries.filter((e) => e.address === address).reduce((a, e) => a + e.value, 0);

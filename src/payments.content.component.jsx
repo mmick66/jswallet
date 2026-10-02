@@ -6,8 +6,7 @@ import {
 
 import TransactionDisplay from './transaction.display';
 import toPaymentRows from './payments.rows';
-import Wallet from './logic/wallet.class';
-import net from './logic/network';
+import jswallet from './jswallet';
 
 class PaymentsContent extends React.Component {
 
@@ -27,16 +26,16 @@ class PaymentsContent extends React.Component {
 
     componentDidMount() {
 
-        Wallet.all().then((wallets) => {
+        jswallet.listWallets().then((wallets) => {
 
             this.wallets = wallets;
 
-            net.api.getTransactions(wallets.map((w) => w.address)).then((txs) => {
+            return jswallet.getTransactions(wallets.map((w) => w.address)).then((txs) => {
                 this.transactions = txs;
-            }).catch((e) => {
-                console.log(e);
-                message.error('Could not load payments');
             });
+        }).catch((e) => {
+            console.log(e);
+            message.error('Could not load payments');
         });
     }
 

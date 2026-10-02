@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import bitcoin, { ECPair } from '../src/logic/bitcoin';
-import network from '../src/logic/network';
-import Wallet from '../src/logic/wallet.class';
+import bitcoin, { ECPair } from '../src/common/bitcoin';
+import network from '../src/main/network';
+import Wallet from '../src/main/wallet.class';
 
 // Testnet WIF of private key 1 and its address
 const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';

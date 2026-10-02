@@ -1,11 +1,9 @@
 import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 
-import EventEmitter from 'events';
-
-import Constants from './constants';
+import Constants from '../common/constants';
 import cipher from './cipher';
-import bitcoin, { bip32, ECPair } from './bitcoin';
-import { isValidAddress } from './address';
+import bitcoin, { bip32, ECPair } from '../common/bitcoin';
+import { isValidAddress } from '../common/address';
 
 import bnet from './network';
 import Database from './database';
@@ -24,10 +22,9 @@ const toSatoshis = (btc, what) => {
 
 const verifySignature = (pubkey, hash, signature) => ECPair.fromPublicKey(pubkey).verify(hash, signature);
 
-class Wallet extends EventEmitter {
+class Wallet {
 
     constructor(info) {
-        super();
         this.__name = info.name;
         this.__address = info.address;
         this.__wif = info.wif;
@@ -198,6 +195,13 @@ class Wallet extends EventEmitter {
         return Wallet.__store;
     }
 
+    /**
+     * Keeps the wallets in the given directory instead of ./db, which is relative to the working directory
+     */
+    static open(dir) {
+        Wallet.__store = new Database(Wallet.Defaults.DBFileName, dir);
+    }
+
     static all() {
         return Wallet.store.find({ network: bnet.name }).then((docs) => {
             return docs.map((doc) => new Wallet(doc));
@@ -232,7 +236,6 @@ class Wallet extends EventEmitter {
 
         return bnet.api.getUnspentOutputs(this.address).then((utxos) => {
             this.utxos = utxos;
-            this.emit(Wallet.Events.Updated);
             return true;
         });
     }
@@ -241,9 +244,11 @@ class Wallet extends EventEmitter {
         return Wallet.store.insert(this.toObject());
     }
 
+    /**
+     * @returns {Promise<number>} The number of records removed, once they are
+     */
     erase() {
-        Wallet.store.remove({ address: this.address });
-        this.emit(Wallet.Events.Updated);
+        return Wallet.store.remove({ address: this.address });
     }
 
 
@@ -267,10 +272,5 @@ Wallet.Defaults = {
     Path: "m/44'/0'/0'/0/0",
     DBFileName: 'wallets',
 };
-
-Wallet.Events = {
-  Updated: 'updated',
-};
-
 
 export default Wallet;

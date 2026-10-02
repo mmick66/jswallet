@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import axios, { AxiosError } from 'axios';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import Constants from '../src/logic/constants';
-import network from '../src/logic/network';
+import Constants from '../src/common/constants';
+import network from '../src/main/network';
 
 // Recorded from mempool.space (testnet4 unless noted) on 2026-10-02:
 //   utxo.json, txs.json   /address/mvE8CiixdhZycmZEUR4mUtEiAtnu9PK2YD/utxo and /txs
@@ -259,7 +259,7 @@ describe('network on mainnet', () => {
     const load = (env) => {
         vi.resetModules();
         vi.doMock('../src/env.json', () => ({ default: env }));
-        return import('../src/logic/network').then(m => m.default);
+        return import('../src/main/network').then(m => m.default);
     };
 
     it('uses the bitcoin network and its apiBase from env.json', async () => {

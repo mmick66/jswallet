@@ -6,7 +6,7 @@ import {
     LineChart, Line, CartesianGrid, XAxis, YAxis
 } from 'recharts';
 
-import net from './logic/network';
+import jswallet from './jswallet';
 
 class StatsContent extends React.Component {
 
@@ -27,7 +27,7 @@ class StatsContent extends React.Component {
 
     loadPriceData(timespan) {
 
-        net.api.getPriceChart(timespan).then((results) => {
+        jswallet.getPriceChart(timespan).then((results) => {
             const mapped = results.map((raw) => {
 
                 const date = new Date(raw.time * 1000);

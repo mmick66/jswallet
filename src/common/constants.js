@@ -19,6 +19,7 @@ export default {
     ReturnValues: {
         Fragments: {
             MinimumFeeNotMet: 'min relay fee not met',
+            WrongPassword: 'Wrong password',
         },
     },
     Messages: {

@@ -4,36 +4,25 @@ import {
     Button, Table, Modal, message, Popconfirm
 } from 'antd';
 
-import { clipboard } from 'electron';
-
-import Constants from './logic/constants';
+import Constants from './common/constants';
 import CreateForm from './create.form.modal.component';
 import CreateTransaction from './create.transaction.modal.component';
-import Hasher from './logic/hasher.util';
-import Wallet from './logic/wallet.class';
-import bnet from './logic/network';
+import copyText from './clipboard';
+import jswallet from './jswallet';
 
 // Helper Functions
 
-const validateFormHashed = (form) => {
+// The password goes to the main process as typed; it is hashed there
+const validateForm = (form) => {
     return new Promise((res, rej) => {
         form.validateFields((err, values) => {
             if (err) rej(err);
-            Hasher.hash(values.password).then((hash) => {
-                values.password = hash;
-                res(values);
-            }, (e) => {
-                rej(e);
-            });
+            else res(values);
         });
     });
 };
 
-const updateWallet = (wallet) => {
-    return wallet.update().catch((e) => {
-        console.log(`Could not update wallet ${wallet.name}`, e);
-    });
-};
+const totalCoins = (wallets) => wallets.reduce((a, w) => a + w.coins, 0);
 
 const formatAmount = (amount) => {
     const nf = new Intl.NumberFormat('en-US', {
@@ -55,7 +44,6 @@ class WalletsContent extends React.Component {
             modalOpenSend: false,
             price: 1.0,
             fee: null,
-            total: 0.0,
             wallets: [],
             sendingPayment: false,
             sourceWallet: null,
@@ -70,7 +58,7 @@ class WalletsContent extends React.Component {
 
     componentDidMount() {
 
-        bnet.api.getPrice('USD').then((price) => {
+        jswallet.getPrice().then((price) => {
             this.setState({ price: price });
         }).catch((e) => {
             console.log(e);
@@ -78,18 +66,10 @@ class WalletsContent extends React.Component {
 
         this.loadFee();
 
-        Wallet.all().then((wallets) => {
-
-            wallets.forEach((w) => {
-                w.on(Wallet.Events.Updated, () => {
-                    const { wallets: current } = this.state;
-                    const newTotal = current.reduce((a, c) => a + c.coins, 0);
-                    this.setState({ total: newTotal });
-                });
-                updateWallet(w);
-            });
+        jswallet.listWallets().then((wallets) => {
 
             this.setState({ wallets: wallets });
+            wallets.forEach((w) => this.refreshWallet(w));
 
         }, (e) => {
             console.log(e);
@@ -97,40 +77,48 @@ class WalletsContent extends React.Component {
         });
     }
 
-    // Send stays disabled until a fee has loaded: Wallet.send needs a number, and a zero fee
-    // makes the node reject the transaction. On failure keep the last fee; Reload retries.
+    // Send stays disabled until a fee has loaded: the send form checks the funds against it.
+    // On failure keep the last fee; Reload retries.
     loadFee() {
-        bnet.api.getFee().then((fee) => {
+        jswallet.getFee().then((fee) => {
             this.setState({ fee: fee });
         }).catch((e) => {
             console.log('Could not get fee ', e);
         });
     }
 
+    // Resolves with the wallet's new balance in its row
+    refreshWallet(wallet) {
+        return jswallet.refreshWallet(wallet.address).then(({ coins }) => {
+            this.setState(({ wallets }) => ({
+                wallets: wallets.map((w) => (w.address === wallet.address ? { ...w, coins: coins } : w)),
+            }));
+        }).catch((e) => {
+            console.log(`Could not update wallet ${wallet.name}`, e);
+        });
+    }
+
     handleCreate() {
 
-        validateFormHashed(this.form).then((values) => {
+        validateForm(this.form).then((values) => {
 
             this.form.resetFields();
             this.setState({ modalOpenCreate: false });
 
-            const mnemonic = Wallet.generate();
-
-            const wallet = Wallet.create(values.name, mnemonic).encrypt(values.password);
-
-            this.__addWallet(wallet, mnemonic);
+            this.__addWallet(values.name, values.password);
+        }, () => {
+            // The form shows what is missing
         });
 
     }
 
-    __addWallet(wallet, mnemonic) {
+    __addWallet(name, password) {
 
-        const { wallets } = this.state;
-        this.setState({
-            wallets: wallets.concat([wallet]),
-        });
+        jswallet.createWallet({ name: name, password: password }).then(({ wallet, mnemonic }) => {
 
-        wallet.save().then(() => {
+            this.setState(({ wallets }) => ({
+                wallets: wallets.concat([wallet]),
+            }));
 
             message.success(Constants.Messages.Wallet.Created);
 
@@ -152,20 +140,23 @@ class WalletsContent extends React.Component {
 
     handleSendit() {
 
-        validateFormHashed(this.form).then((values) => {
+        validateForm(this.form).then((values) => {
 
             this.setState({ modalOpenSend: false });
 
-            const { sourceWallet, fee } = this.state;
-            if (!sourceWallet.matches(values.password)) {
-                message.error('Wrong password entered.');
-                return;
-            }
+            const { sourceWallet } = this.state;
 
-            sourceWallet.send(values.bitcoin, values.address, fee, values.password).then(() => {
+            jswallet.sendPayment({
+                from: sourceWallet.address, to: values.address, btc: values.bitcoin, password: values.password,
+            }).then(() => {
                 message.success(Constants.Messages.Transactions.Sent);
                 this.handleReload();
             }, (e) => {
+
+                if (e.message.includes(Constants.ReturnValues.Fragments.WrongPassword)) {
+                    message.error('Wrong password entered.');
+                    return;
+                }
 
                 const info = { title: Constants.Messages.Transactions.NOTSent };
                 const substring = Constants.ReturnValues.Fragments.MinimumFeeNotMet;
@@ -193,7 +184,7 @@ class WalletsContent extends React.Component {
 
     handleReload() {
         const { wallets } = this.state;
-        wallets.forEach(updateWallet);
+        wallets.forEach((w) => this.refreshWallet(w));
         this.loadFee();
     }
 
@@ -203,8 +194,10 @@ class WalletsContent extends React.Component {
     render() {
 
         const {
-            modalOpenCreate, modalOpenSend, sendingPayment, sourceWallet, wallets, price, fee, total
+            modalOpenCreate, modalOpenSend, sendingPayment, sourceWallet, wallets, price, fee
         } = this.state;
+
+        const total = totalCoins(wallets);
 
         const openSendModal = (event, record) => {
             event.stopPropagation();
@@ -216,17 +209,24 @@ class WalletsContent extends React.Component {
 
         const onDeleteRow = (event, record) => {
             event.stopPropagation();
-            const { wallets: current } = this.state;
-            this.setState({
-                wallets: current.filter((w) => w !== record)
+            jswallet.deleteWallet(record.address).then(() => {
+                this.setState(({ wallets: current }) => ({
+                    wallets: current.filter((w) => w.address !== record.address)
+                }));
+            }, (e) => {
+                console.log(e);
+                message.error(`Could not delete wallet ${record.name}`);
             });
-            record.erase();
 
         };
 
         const onAddressClick = (event, record) => {
-            clipboard.writeText(record.address);
-            message.success('Adress copied to the clipboard');
+            copyText(record.address).then(() => {
+                message.success('Adress copied to the clipboard');
+            }, (e) => {
+                console.log(e);
+                message.error('Could not copy the address');
+            });
         };
 
 
@@ -306,6 +306,7 @@ class WalletsContent extends React.Component {
 
                 <Table columns={columns}
                        dataSource={wallets}
+                       rowKey="address"
                        pagination={false}
                        style={{ height: '250px', backgroundColor: 'white' }} />
 
