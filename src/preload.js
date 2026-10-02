@@ -7,12 +7,12 @@ import Channels from './common/ipc.channels';
 // src/main/ipc.js answers, and returns its promise. The preload runs sandboxed, so it imports
 // nothing but electron and modules that Vite bundles into it.
 contextBridge.exposeInMainWorld('jswallet', {
-    // [{ name, address, network, coins }]
+    // [{ name, address, network, coins, utxoValues }]
     listWallets: () => ipcRenderer.invoke(Channels.ListWallets),
     // { wallet, mnemonic }
     createWallet: ({ name, password }) => ipcRenderer.invoke(Channels.CreateWallet, { name, password }),
     deleteWallet: (address) => ipcRenderer.invoke(Channels.DeleteWallet, address),
-    // { coins }
+    // { coins, utxoValues }
     refreshWallet: (address) => ipcRenderer.invoke(Channels.RefreshWallet, address),
     // { txid }
     sendPayment: ({
@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('jswallet', {
         from, to, btc, password
     }),
     getPrice: () => ipcRenderer.invoke(Channels.GetPrice),
+    // The fee rate in sat/vB
     getFee: () => ipcRenderer.invoke(Channels.GetFee),
     getTransactions: (addresses) => ipcRenderer.invoke(Channels.GetTransactions, addresses),
     getPriceChart: (timespan) => ipcRenderer.invoke(Channels.GetPriceChart, timespan),

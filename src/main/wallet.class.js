@@ -4,6 +4,7 @@ import Constants from '../common/constants';
 import cipher from './cipher';
 import bitcoin, { bip32, ECPair } from '../common/bitcoin';
 import { isValidAddress } from '../common/address';
+import { planSpend } from '../common/fee';
 
 import bnet from './network';
 import Database from './database';
@@ -127,35 +128,30 @@ class Wallet {
 
 
     /**
-     * Spends the unspent outputs, in order, until they cover the amount and the fee.
-     * The change goes back to this wallet, unless it is below the dust limit and is left to the fee.
+     * Spends the unspent outputs, in order, until they cover the amount and the fee for the size of
+     * the transaction, as planSpend picks them. The change goes back to this wallet, unless it is
+     * below the dust limit and is left to the fee.
      * @param btc The amount in bitcoins
      * @param address The receiver, on the configured network
-     * @param fee The fee in bitcoins
+     * @param rate The fee rate in sat/vB, as network.api.getFee gives it
      * @param password Unlocks the key of an encrypted wallet
      * @returns {Promise<string>} The txid, once broadcast
      */
-    async send(btc, address, fee, password) {
+    async send(btc, address, rate, password) {
 
         const amount = toSatoshis(btc, 'amount');
-        const satoshis_fee = toSatoshis(fee, 'fee');
-        const dust = BigInt(Constants.Transactions.DustLimit);
 
+        if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error(`Not a valid fee rate in sat/vB: ${rate}`);
         if (amount === 0n) throw new Error('The amount must be more than zero');
         if (!isValidAddress(address)) throw new Error(`Not a valid ${bnet.name} address: ${address}`);
 
-        const needed = amount + satoshis_fee;
-        const spent = [];
-        let current = 0n;
-        for (const utxo of this.utxos) {
-            if (current >= needed) break;
-            spent.push(utxo);
-            current += BigInt(utxo.value);
+        const values = this.utxos.map((utxo) => utxo.value);
+        const plan = planSpend(values, Number(amount), rate);
+        if (!plan.covered) {
+            const available = values.reduce((a, v) => a + v, 0);
+            throw new Error(`Not enough funds: ${Number(amount) + plan.fee} satoshis needed with the fee, ${available} available`);
         }
-
-        if (current < needed) {
-            throw new Error(`Not enough funds: ${needed} satoshis needed with the fee, ${current} available`);
-        }
+        const spent = this.utxos.slice(0, plan.inputs);
 
         const network = bnet.current;
 
@@ -176,9 +172,7 @@ class Wallet {
         });
 
         psbt.addOutput({ address: address, value: amount });
-
-        const change = current - needed;
-        if (change >= dust) psbt.addOutput({ address: this.address, value: change });
+        if (plan.change > 0) psbt.addOutput({ address: this.address, value: BigInt(plan.change) });
 
         psbt.signAllInputs(key);
         if (!psbt.validateSignaturesOfAllInputs(verifySignature)) throw new Error('The transaction signatures are not valid');

@@ -8,13 +8,22 @@ import * as check from './ipc.arguments';
 const Timespans = ['30days', '90days', '1year'];
 
 /**
+ * A wallet's balance: its coins, and the values in satoshis of the unspent outputs, in the order
+ * Wallet.send spends them, so that the send form can show the fee (see planSpend)
+ */
+const toBalance = (wallet) => ({
+    coins: wallet.coins,
+    utxoValues: wallet.utxos.map((utxo) => utxo.value),
+});
+
+/**
  * What the renderer sees of a wallet. The key, encrypted or not, and the password hash stay in main.
  */
 const toDTO = (wallet) => ({
     name: wallet.name,
     address: wallet.address,
     network: wallet.network,
-    coins: wallet.coins,
+    ...toBalance(wallet),
 });
 
 /**
@@ -86,7 +95,7 @@ export const createIpcHandlers = ({ writeClipboard }) => {
         [Channels.RefreshWallet]: async (address) => {
             const wallet = await wallets.get(check.address(address, 'address'));
             await wallet.update();
-            return { coins: wallet.coins };
+            return toBalance(wallet);
         },
 
         /**
@@ -104,9 +113,9 @@ export const createIpcHandlers = ({ writeClipboard }) => {
             const hash = await Hasher.hash(password);
             if (!wallet.matches(hash)) throw new Error(Constants.ReturnValues.Fragments.WrongPassword);
 
-            // Spends the unspent outputs that the network has now, with the fee it asks for now
-            const [fee] = await Promise.all([bnet.api.getFee(), wallet.update()]);
-            const txid = await wallet.send(btc, to, fee, hash);
+            // Spends the unspent outputs that the network has now, at the fee rate it asks for now
+            const [rate] = await Promise.all([bnet.api.getFee(), wallet.update()]);
+            const txid = await wallet.send(btc, to, rate, hash);
 
             return { txid: txid };
         },

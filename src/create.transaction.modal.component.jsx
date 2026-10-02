@@ -4,6 +4,7 @@ import { Input, Icon, Form } from 'antd';
 
 import Constants from './common/constants';
 import { isValidAddress } from './common/address';
+import { planSpend } from './common/fee';
 
 const isValidNumber = (value) => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
@@ -19,7 +20,7 @@ class CreateTransactionForm extends React.Component {
         super(props);
 
         this.rate = props.rate || 1.0;
-        this.fees = props.fees || 0.0;
+        this.feeRate = props.feeRate;
         this.wallet = props.sender;
 
         this.icons = {
@@ -29,6 +30,23 @@ class CreateTransactionForm extends React.Component {
 
         this.convertDollarsToBitcoin = this.convertDollarsToBitcoin.bind(this);
         this.convertBitcoinToDollars = this.convertBitcoinToDollars.bind(this);
+    }
+
+    // What Wallet.send spends for the amount: the fee for its inputs, and whether the funds cover it
+    planFor(btc) {
+        return planSpend(this.wallet.utxoValues, Math.round(Number(btc) * Constants.Bitcoin.Satoshis), this.feeRate);
+    }
+
+    // The fee for the inputs that the amount needs, or only the rate until there is an amount
+    describeFee() {
+        const { form } = this.props;
+        const btc = form.getFieldValue('bitcoin');
+        const rate = `${this.feeRate} sat/vB`;
+        if (!isValidNumber(btc) || !(Number(btc) > 0)) return `Network fee at ${rate}`;
+
+        const { fee, inputs } = this.planFor(btc);
+        const bitcoins = (fee / Constants.Bitcoin.Satoshis).toFixed(Constants.Bitcoin.Decimals);
+        return `Network fee: Ƀ ${bitcoins} for ${inputs} ${inputs === 1 ? 'input' : 'inputs'} at ${rate}`;
     }
 
     convertDollarsToBitcoin(rule, stringValue, callback) {
@@ -42,20 +60,21 @@ class CreateTransactionForm extends React.Component {
 
         const value = parseFloat(stringValue);
 
-        const bitcoin = value * this.rate;
+        const bitcoin = (value * this.rate).toFixed(Constants.Bitcoin.Decimals);
 
         console.log({
-            value: value, bitcoin: bitcoin, fees: this.fees, coins: this.wallet.coins
+            value: value, bitcoin: bitcoin, feeRate: this.feeRate, coins: this.wallet.coins
         });
 
-        if (bitcoin + this.fees >= this.wallet.coins) {
+        // Also when the funds do not cover it, so that the fee below is the one for this amount
+        form.setFieldsValue({
+            bitcoin: bitcoin,
+        });
+
+        if (!this.planFor(bitcoin).covered) {
             callback('Not enough funds');
             return;
         }
-
-        form.setFieldsValue({
-            bitcoin: bitcoin.toFixed(Constants.Bitcoin.Decimals),
-        });
 
         callback();
 
@@ -70,7 +89,7 @@ class CreateTransactionForm extends React.Component {
             return;
         }
 
-        if (value + this.fees >= this.wallet.coins) {
+        if (!this.planFor(value).covered) {
             callback('Not enough funds');
             return;
         }
@@ -118,7 +137,7 @@ class CreateTransactionForm extends React.Component {
 
                 </Form.Item>
 
-                <Form.Item>
+                <Form.Item extra={this.describeFee()}>
 
                     {getFieldDecorator('bitcoin', {
                         rules: [{

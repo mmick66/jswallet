@@ -140,16 +140,25 @@ describe('network', () => {
 
     describe('getFee', () => {
 
-        it('prices an average transaction at fastestFee sat/vB, in bitcoins', async () => {
+        it('resolves with the fastestFee rate in sat/vB', async () => {
             vi.spyOn(axios, 'get').mockReturnValue(ok(json('fees.json')));
-            expect(await network.api.getFee()).toBe((1 * 255) / 1e8);
+            expect(await network.api.getFee()).toBe(1);
         });
 
         it('reads fastestFee and not the slower rates', async () => {
             vi.spyOn(axios, 'get').mockReturnValue(ok({
                 fastestFee: 12, halfHourFee: 8, hourFee: 5, economyFee: 2, minimumFee: 1,
             }));
-            expect(await network.api.getFee()).toBe((12 * 255) / 1e8);
+            expect(await network.api.getFee()).toBe(12);
+        });
+
+        it.each([
+            ['missing', {}],
+            ['zero', { fastestFee: 0 }],
+            ['not a number', { fastestFee: '12' }],
+        ])('rejects when fastestFee is %s', async (what, fees) => {
+            vi.spyOn(axios, 'get').mockReturnValue(ok(fees));
+            await expect(network.api.getFee()).rejects.toThrow('No fee rate available');
         });
 
         it('rejects instead of resolving a zero fee when the API fails', async () => {

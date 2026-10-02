@@ -39,7 +39,8 @@ PREV.version = 2;
 PREV.addInput(new Uint8Array(32).fill(7), 1);
 PREV.addOutput(script(ADDRESS), 60000n);
 const UTXOS = [{ txid: PREV.getId(), vout: 0, value: 60000 }];
-const FEE = 2550 / 1e8;
+// sat/vB: spending one UTXO with change is 226 vB
+const RATE = 10;
 
 // Every string anywhere in a value, to check that no key or password hash crosses IPC
 const strings = value => {
@@ -95,7 +96,7 @@ describe('IPC handlers', () => {
             expect(mnemonic.split(' ')).toHaveLength(12);
             const restored = Wallet.create('New', mnemonic);
             expect(wallet).toEqual({
-                name: 'New', address: restored.address, network: 'testnet', coins: 0,
+                name: 'New', address: restored.address, network: 'testnet', coins: 0, utxoValues: [],
             });
 
             const [doc] = await stored();
@@ -133,9 +134,9 @@ describe('IPC handlers', () => {
             const wallets = await call(Channels.ListWallets);
 
             expect(wallets).toHaveLength(2);
-            wallets.forEach(w => expect(Object.keys(w).sort()).toEqual(['address', 'coins', 'name', 'network']));
+            wallets.forEach(w => expect(Object.keys(w).sort()).toEqual(['address', 'coins', 'name', 'network', 'utxoValues']));
             expect(wallets.find(w => w.name === 'Savings')).toEqual({
-                name: 'Savings', address: ADDRESS, network: 'testnet', coins: 0,
+                name: 'Savings', address: ADDRESS, network: 'testnet', coins: 0, utxoValues: [],
             });
             const docs = await stored();
             const secrets = docs.flatMap(doc => [doc.wif, doc.password]);
@@ -150,15 +151,16 @@ describe('IPC handlers', () => {
 
     describe('refreshWallet', () => {
 
-        it('resolves with the balance of the unspent outputs, which listWallets then shows', async () => {
+        it('resolves with the balance and values of the unspent outputs, which listWallets then shows', async () => {
             await Wallet.store.insert(LEGACY_RECORD);
             const getUnspentOutputs = vi.spyOn(network.api, 'getUnspentOutputs').mockResolvedValue([
                 { txid: 'a', vout: 0, value: 60000 }, { txid: 'b', vout: 1, value: 15000 },
             ]);
 
-            expect(await call(Channels.RefreshWallet, ADDRESS)).toEqual({ coins: 0.00075 });
+            const balance = { coins: 0.00075, utxoValues: [60000, 15000] };
+            expect(await call(Channels.RefreshWallet, ADDRESS)).toEqual(balance);
             expect(getUnspentOutputs).toHaveBeenCalledWith(ADDRESS);
-            expect(await call(Channels.ListWallets)).toEqual([expect.objectContaining({ address: ADDRESS, coins: 0.00075 })]);
+            expect(await call(Channels.ListWallets)).toEqual([expect.objectContaining({ address: ADDRESS, ...balance })]);
         });
 
         it('rejects an address that has no wallet', async () => {
@@ -202,14 +204,14 @@ describe('IPC handlers', () => {
         beforeEach(async () => {
             await Wallet.store.insert(LEGACY_RECORD);
             vi.spyOn(network.api, 'getUnspentOutputs').mockResolvedValue(UTXOS);
-            vi.spyOn(network.api, 'getFee').mockResolvedValue(FEE);
+            vi.spyOn(network.api, 'getFee').mockResolvedValue(RATE);
             vi.spyOn(network.api, 'getTxHex').mockResolvedValue(PREV.toHex());
             broadcast = vi.spyOn(network.api, 'broadcast').mockImplementation(hex => Promise.resolve(
                 bitcoin.Transaction.fromHex(hex).getId(),
             ));
         });
 
-        it('sends from a legacy-encrypted wallet with the current outputs and fee, and upgrades its key', async () => {
+        it('sends from a legacy-encrypted wallet with the current outputs and fee rate, and upgrades its key', async () => {
             const { txid } = await call(Channels.SendPayment, {
                 from: ADDRESS, to: RECEIVER, btc: '0.00050000', password: TYPED,
             });
@@ -218,7 +220,7 @@ describe('IPC handlers', () => {
             expect(txid).toBe(tx.getId());
             expect(tx.outs).toEqual([
                 { script: script(RECEIVER), value: 50000n },
-                { script: script(ADDRESS), value: 60000n - 50000n - 2550n },
+                { script: script(ADDRESS), value: 60000n - 50000n - 2260n },
             ]);
 
             const [doc] = await stored();
@@ -258,11 +260,11 @@ describe('IPC handlers', () => {
 
         it('passes getPrice, getFee and getTransactions through', async () => {
             vi.spyOn(network.api, 'getPrice').mockResolvedValue(64000);
-            vi.spyOn(network.api, 'getFee').mockResolvedValue(FEE);
+            vi.spyOn(network.api, 'getFee').mockResolvedValue(RATE);
             const getTransactions = vi.spyOn(network.api, 'getTransactions').mockResolvedValue([{ hash: 'a' }]);
 
             expect(await call(Channels.GetPrice)).toBe(64000);
-            expect(await call(Channels.GetFee)).toBe(FEE);
+            expect(await call(Channels.GetFee)).toBe(RATE);
             expect(await call(Channels.GetTransactions, [ADDRESS, RECEIVER])).toEqual([{ hash: 'a' }]);
             expect(getTransactions).toHaveBeenCalledWith([ADDRESS, RECEIVER]);
         });

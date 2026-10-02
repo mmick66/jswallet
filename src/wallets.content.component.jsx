@@ -43,7 +43,7 @@ class WalletsContent extends React.Component {
             modalOpenCreate: false,
             modalOpenSend: false,
             price: 1.0,
-            fee: null,
+            feeRate: null,
             wallets: [],
             sendingPayment: false,
             sourceWallet: null,
@@ -77,11 +77,11 @@ class WalletsContent extends React.Component {
         });
     }
 
-    // Send stays disabled until a fee has loaded: the send form checks the funds against it.
-    // On failure keep the last fee; Reload retries.
+    // Send stays disabled until a fee rate has loaded: the send form checks the funds against the fee.
+    // On failure keep the last rate; Reload retries.
     loadFee() {
-        jswallet.getFee().then((fee) => {
-            this.setState({ fee: fee });
+        jswallet.getFee().then((feeRate) => {
+            this.setState({ feeRate: feeRate });
         }).catch((e) => {
             console.log('Could not get fee ', e);
         });
@@ -89,9 +89,9 @@ class WalletsContent extends React.Component {
 
     // Resolves with the wallet's new balance in its row
     refreshWallet(wallet) {
-        return jswallet.refreshWallet(wallet.address).then(({ coins }) => {
+        return jswallet.refreshWallet(wallet.address).then((balance) => {
             this.setState(({ wallets }) => ({
-                wallets: wallets.map((w) => (w.address === wallet.address ? { ...w, coins: coins } : w)),
+                wallets: wallets.map((w) => (w.address === wallet.address ? { ...w, ...balance } : w)),
             }));
         }).catch((e) => {
             console.log(`Could not update wallet ${wallet.name}`, e);
@@ -194,7 +194,7 @@ class WalletsContent extends React.Component {
     render() {
 
         const {
-            modalOpenCreate, modalOpenSend, sendingPayment, sourceWallet, wallets, price, fee
+            modalOpenCreate, modalOpenSend, sendingPayment, sourceWallet, wallets, price, feeRate
         } = this.state;
 
         const total = totalCoins(wallets);
@@ -252,7 +252,7 @@ class WalletsContent extends React.Component {
                 key: 'send',
                 render: (r) => {
                     return (
-                        <Button disabled={!(fee > 0)} onClick={(e) => openSendModal(e, r)} icon="login" />
+                        <Button disabled={!(feeRate > 0)} onClick={(e) => openSendModal(e, r)} icon="login" />
                     );
                 }
             },
@@ -320,7 +320,7 @@ class WalletsContent extends React.Component {
                     <CreateTransaction
                         ref={(form) => (this.form = form)}
                         sender={sourceWallet}
-                        fees={fee}
+                        feeRate={feeRate}
                         rate={1.0 / price} />
                 </Modal>
 

@@ -72,10 +72,12 @@ const getPriceChart = (timespan) => get(Constants.Endpoints.PriceChart, {
 }).then((chart) => chart.values.map((point) => ({ time: point.x, price: point.y })));
 
 /**
- * The fee in bitcoins for an average transaction at the fastest rate (sat/vB)
+ * The fastest fee rate in sat/vB. The fee of a transaction depends on its size, see src/common/fee.js
  */
 const getFee = () => get(`${c_apiBase}${Constants.Endpoints.Fees}`).then((fees) => {
-    return (fees.fastestFee * Constants.Transactions.AverageBytes) / Constants.Bitcoin.Satoshis;
+    const rate = fees.fastestFee;
+    if (typeof rate !== 'number' || !(rate > 0)) throw new Error('No fee rate available');
+    return rate;
 });
 
 /**

@@ -8,7 +8,12 @@ export default {
         Bitcoin: 'bitcoin',
     },
     Transactions: {
-        AverageBytes: 255,
+        // P2PKH sizes in vbytes, see src/common/fee.js
+        Vbytes: {
+            Overhead: 10, // version, locktime and the input and output counts
+            Input: 148, // with a compressed key and a signature of at most 72 bytes
+            Output: 34,
+        },
         DustLimit: 546, // satoshis; smaller P2PKH outputs are non-standard
     },
     Endpoints: {
