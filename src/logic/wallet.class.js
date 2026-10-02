@@ -1,10 +1,10 @@
 import bip39 from 'bip39';
 import bitcoin from 'bitcoinjs-lib';
-import crypto from 'crypto';
 
 import EventEmitter from 'events';
 
 import Constants from './constants';
+import cipher from './cipher';
 
 import bnet from './network';
 import Database from './database';
@@ -75,22 +75,38 @@ class Wallet extends EventEmitter {
     encrypt(password) {
         if (this.__password) throw new Error('Cannot re-encrypt an encrypted key');
         this.__password = password;
-        const cipher = crypto.createCipher(Wallet.Defaults.Encryption, password);
-        this.__wif = cipher.update(this.__wif, 'utf8', 'hex') + cipher.final('hex');
+        this.__wif = cipher.encrypt(this.__wif, password);
         return this;
     }
 
     /**
      * This method will NOT decrypt the wallet but temporarily the key and return it to the calling code
      * This method is NOT symmetrical with the encrypt one.
+     * A key stored in the legacy format is re-encrypted and saved before this resolves,
+     * as the password is only available here.
      * @param password Hashed or not it will be used, it only needs to match the one used in encryption
-     * @returns {string} It will not return the wallet itself like the encrypt
+     * @returns {Promise<string>} It will not return the wallet itself like the encrypt
      */
-    readDecrypted(password) {
+    async readDecrypted(password) {
         if (!this.__password) throw new Error('Cannot de-encrypt an key that was not encrypted');
         if (!password || !this.matches(password)) throw new Error('Passwords do not match');
-        const cipher = crypto.createDecipher(Wallet.Defaults.Encryption, password);
-        return cipher.update(this.__wif, 'hex', 'utf8') + cipher.final('utf8');
+        const wif = cipher.decrypt(this.__wif, password);
+        if (cipher.isLegacy(this.__wif)) await this.__upgradeEncryption(wif, password);
+        return wif;
+    }
+
+    /**
+     * Replaces the legacy encrypted key with the current format, in the store and then in memory.
+     * Failing to save is not fatal: the wallet keeps working and is upgraded on the next read.
+     */
+    __upgradeEncryption(wif, password) {
+        const legacy = this.__wif;
+        const upgraded = cipher.encrypt(wif, password);
+        return Wallet.store.update({ address: this.address, wif: legacy }, { $set: { wif: upgraded } }).then(() => {
+            this.__wif = upgraded;
+        }, (e) => {
+            console.error('Could not save the re-encrypted wallet key', e);
+        });
     }
 
     matches(password) {
@@ -98,7 +114,7 @@ class Wallet extends EventEmitter {
     }
 
 
-    send(btc, address, fee, password) {
+    async send(btc, address, fee, password) {
 
         const satoshis = Math.round(btc * Constants.Bitcoin.Satoshis);
         const satoshis_fee = Math.round(fee * Constants.Bitcoin.Satoshis);
@@ -122,7 +138,7 @@ class Wallet extends EventEmitter {
         if (change) txb.addOutput(this.address, change);
 
 
-        const wif = this.__password ? this.readDecrypted(password) : this.wif;
+        const wif = this.__password ? await this.readDecrypted(password) : this.wif;
         const key = bitcoin.ECPair.fromWIF(wif, network);
 
         txb.sign(0, key);
@@ -208,7 +224,6 @@ class Wallet extends EventEmitter {
 }
 
 Wallet.Defaults = {
-    Encryption: 'aes-256-cbc',
     Path: "m/44'/0'/0'/0/0",
     DBFileName: 'wallets',
 };
