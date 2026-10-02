@@ -1,0 +1,35 @@
+# Weekly update PRs, each verified by .github/workflows/ci.yml.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Hold new releases back a few days, so a hijacked version is usually
+    # pulled from npm before it reaches a PR. Security updates skip this.
+    cooldown:
+      default-days: 3
+    # A package goes to the first group whose patterns match it.
+    groups:
+      # Electron alone, so each major arrives as its own PR. Migrate one major
+      # at a time: https://www.electronjs.org/docs/latest/breaking-changes
+      electron:
+        patterns:
+          - electron
+      electron-tooling:
+        patterns:
+          - "@electron-forge/*"
+          - "@electron/*"
+      lint:
+        patterns:
+          - eslint
+          - "eslint-*"
+          - "@eslint/*"
+          - "@stylistic/*"
+          - globals
+
+  # Keeps the SHA-pinned actions in the workflows current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
