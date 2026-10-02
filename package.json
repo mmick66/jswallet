@@ -2,14 +2,20 @@
   "name": "jswallet",
   "productName": "jswallet",
   "version": "1.0.0",
+  "private": true,
   "description": "A sample Bitcoin wallet",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --cache --color --ext .jsx,.js src"
+    "lint": "eslint --cache --color --ext .jsx,.js src",
+    "test": "vitest run",
+    "check": "npm test"
   },
   "keywords": [],
   "author": "mmichailidis",
@@ -73,6 +79,26 @@
     "eslint-config-airbnb": "^15",
     "eslint-plugin-import": "^2",
     "eslint-plugin-jsx-a11y": "^5",
-    "eslint-plugin-react": "^7"
+    "eslint-plugin-react": "^7",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "antd": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "eslint-config-airbnb": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-import": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-jsx-a11y": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-react": {
+      "eslint": "$eslint"
+    }
   }
 }
