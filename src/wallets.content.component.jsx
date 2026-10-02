@@ -38,7 +38,11 @@ function WalletsContent() {
     const [price, setPrice] = useState(1.0);
     const [feeRate, setFeeRate] = useState(null);
     const [wallets, setWallets] = useState([]);
-    const [sourceWallet, setSourceWallet] = useState(null);
+    const [sourceAddress, setSourceAddress] = useState(null);
+
+    // Looked up on each render, so that the send form checks the balance that a refresh loads. None
+    // once that wallet is deleted: the send form is left out without a wallet to send from.
+    const sourceWallet = wallets.find((w) => w.address === sourceAddress);
 
     // Send stays disabled until a fee rate has loaded: the send form checks the funds against the fee.
     // On failure keep the last rate; Reload retries.
@@ -126,7 +130,7 @@ function WalletsContent() {
             setModalOpenSend(false);
 
             jswallet.sendPayment({
-                from: sourceWallet.address, to: values.address, btc: values.bitcoin, password: values.password,
+                from: sourceAddress, to: values.address, btc: values.bitcoin, password: values.password,
             }).then(() => {
                 message.success(Constants.Messages.Transactions.Sent);
                 handleReload();
@@ -161,7 +165,7 @@ function WalletsContent() {
 
     const openSendModal = (event, record) => {
         event.stopPropagation();
-        setSourceWallet(record);
+        setSourceAddress(record.address);
         setModalOpenSend(true);
     };
 
@@ -269,11 +273,13 @@ function WalletsContent() {
                 okText="Send"
                 onCancel={handleCancel}
                 onOk={handleSendit}>
-                <CreateTransactionForm
-                    form={sendForm}
-                    sender={sourceWallet}
-                    feeRate={feeRate}
-                    rate={1.0 / price} />
+                {sourceWallet && (
+                    <CreateTransactionForm
+                        form={sendForm}
+                        sender={sourceWallet}
+                        feeRate={feeRate}
+                        rate={1.0 / price} />
+                )}
             </Modal>
 
             <div style={{ marginTop: '24px' }}>

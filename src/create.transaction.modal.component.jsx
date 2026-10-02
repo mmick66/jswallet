@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { Input, Form } from 'antd';
 import { QrcodeOutlined, UnlockOutlined } from '@ant-design/icons';
@@ -65,6 +65,13 @@ function CreateTransactionForm({
         const error = sendError(toAmount(parseFloat(value)));
         return error ? Promise.reject(new Error(error)) : Promise.resolve();
     };
+
+    // The errors shown are those of the last check. Check the amounts again when the wallet, its
+    // balance, the fee rate or the rate changes, as when Send opens for another wallet; only those
+    // entered or checked already (dirty), so that an empty form does not show its required errors.
+    useEffect(() => {
+        form.validateFields(['dollars', 'bitcoin'], { dirty: true }).catch(() => {});
+    }, [form, sender, feeRate, rate]);
 
     const onValuesChange = (changed) => {
         if (isValidNumber(changed.dollars)) {
