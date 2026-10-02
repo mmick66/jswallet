@@ -9,6 +9,7 @@ import Wallet from './main/wallet.class';
 import { createIpcHandlers, registerIpcHandlers } from './main/ipc';
 import { databaseDirectory, migrateLegacyDatabase } from './main/storage';
 import mainWindowOptions from './main/security/window-options';
+import { APP_INDEX_URL, handleAppProtocol, registerAppScheme } from './main/security/app-protocol';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -18,6 +19,10 @@ if (started) {
 // Sandbox every renderer, including any created later, whatever its own webPreferences say.
 // It only takes effect before the app is ready.
 app.enableSandbox();
+
+// The packaged renderer is served from app://jswallet, not file:// (src/main/security/app-protocol.js).
+// Like the sandbox, the scheme's privileges must be set before the app is ready.
+registerAppScheme();
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -42,7 +47,7 @@ const createWindow = () => {
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
         mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
     } else {
-        mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+        mainWindow.loadURL(APP_INDEX_URL);
     }
 
     // Open the DevTools.
@@ -64,6 +69,9 @@ app.whenReady().then(async () => {
     const dbDir = databaseDirectory(app.getPath('userData'));
     migrateLegacyDatabase(Wallet.Defaults.DBFileName, dbDir);
     Wallet.open(dbDir);
+
+    // app://jswallet serves the renderer's build directory, and nothing else
+    handleAppProtocol(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}`));
 
     registerIpcHandlers(ipcMain, createIpcHandlers({
         writeClipboard: (text) => clipboard.writeText(text),

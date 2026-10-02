@@ -26,6 +26,8 @@ const electron = vi.hoisted(() => {
         }),
         clipboard: { writeText: vi.fn() },
         ipcMain: { handle: vi.fn() },
+        net: { fetch: vi.fn() },
+        protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
     };
 });
 
