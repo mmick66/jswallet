@@ -127,15 +127,36 @@ const getUnspentOutputs = (address) => {
     return get(`${c_apiBase}/address/${address}/utxo`).then((utxos) => utxos.map(toUtxo));
 };
 
+// Esplora pages the confirmed history 25 transactions at a time (/txs/chain/:last_seen_txid)
+const c_chainPageSize = 25;
+// The chain pages read per address at most (5,000 transactions), should the API keep answering full pages
+const c_maxChainPages = 200;
+
 /**
- * The latest transactions of each address (Esplora's first page: up to 50 unconfirmed and
- * 25 confirmed), merged without duplicates.
+ * The history of an address, newest first, as Esplora returns it. The first page (/txs) holds the
+ * unconfirmed transactions and then the latest confirmed ones: on mempool.space up to 50 in all,
+ * on Blockstream's Esplora up to 50 unconfirmed and 25 confirmed. Each full page asks for the
+ * confirmed transactions after the last one seen, until a page is short.
+ */
+const getHistory = (address) => {
+    const url = `${c_apiBase}/address/${address}/txs`;
+    const next = (history, page, pages) => {
+        if (page.length < c_chainPageSize || pages === c_maxChainPages) return history;
+        const last = history.findLast((tx) => tx.status.confirmed);
+        const after = last ? `/${last.txid}` : '';
+        return get(`${url}/chain${after}`).then((more) => next([...history, ...more], more, pages + 1));
+    };
+    return get(url).then((first) => next(first, first, 0));
+};
+
+/**
+ * The transactions of each address, merged without duplicates.
  * @returns {Promise<Array<{hash, time, inputs: Array<{address, value}>, outputs: Array<{address, value}>}>>}
  */
 const getTransactions = (addresses) => {
-    return Promise.all(addresses.map((address) => get(`${c_apiBase}/address/${address}/txs`))).then((pages) => {
+    return Promise.all(addresses.map(getHistory)).then((histories) => {
         const byHash = new Map();
-        pages.forEach((txs) => {
+        histories.forEach((txs) => {
             txs.forEach((tx) => {
                 if (!byHash.has(tx.txid)) byHash.set(tx.txid, toTransaction(tx));
             });
