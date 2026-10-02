@@ -6,49 +6,27 @@ const describe = (entries) => entries.map((entry, i) => ({ key: i, text: `${entr
 
 const renderEntry = (entry) => entry.text;
 
-class TransactionDisplay extends React.Component {
+// Reads the transaction from props on every render: PaymentsContent keeps one instance in its Modal
+// and passes it each payment the user selects.
+function TransactionDisplay({ content }) {
 
-    constructor(props) {
-        super(props);
+    const hash = content ? content.hash : '';
+    const inputs = content ? describe(content.inputs) : [];
+    const outputs = content ? describe(content.outputs) : [];
 
-        const transaction = props.content;
+    return (
+        <div>
+            <h3>{ hash }</h3>
 
-        console.log(transaction);
+            <h4>Inputs</h4>
+            <Listy items={inputs} rowKey="key" itemRender={renderEntry} />
 
-        if (transaction) {
-            this.state = {
-                hash: transaction.hash,
-                inputs: describe(transaction.inputs),
-                outputs: describe(transaction.outputs),
-            };
-        } else {
-            this.state = {
-                hash: '',
-                inputs: [],
-                outputs: [],
-            };
-        }
+            <h4>Outputs</h4>
+            <Listy items={outputs} rowKey="key" itemRender={renderEntry} />
 
-    }
+        </div>
 
-    render() {
-
-        const { hash, inputs, outputs } = this.state;
-
-        return (
-            <div>
-                <h3>{ hash }</h3>
-
-                <h4>Inputs</h4>
-                <Listy items={inputs} rowKey="key" itemRender={renderEntry} />
-
-                <h4>Outputs</h4>
-                <Listy items={outputs} rowKey="key" itemRender={renderEntry} />
-
-            </div>
-
-        );
-    }
+    );
 }
 
 export default TransactionDisplay;
