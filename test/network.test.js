@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Constants from '../src/common/constants';
-import network from '../src/main/network';
+import network, { client } from '../src/main/network';
 
 // Recorded from mempool.space (testnet4 unless noted) on 2026-10-02:
 //   utxo.json, txs.json   /address/mvE8CiixdhZycmZEUR4mUtEiAtnu9PK2YD/utxo and /txs
@@ -34,7 +34,7 @@ describe('network', () => {
     });
 
     it('uses testnet and testnet4 by default', async () => {
-        const get = vi.spyOn(axios, 'get').mockReturnValue(ok(json('fees.json')));
+        const get = vi.spyOn(client, 'get').mockReturnValue(ok(json('fees.json')));
 
         await network.api.getFee();
 
@@ -46,7 +46,7 @@ describe('network', () => {
     describe('getUnspentOutputs', () => {
 
         it('normalizes UTXOs to { txid, vout, value }', async () => {
-            const get = vi.spyOn(axios, 'get').mockReturnValue(ok(json('utxo.json')));
+            const get = vi.spyOn(client, 'get').mockReturnValue(ok(json('utxo.json')));
 
             const utxos = await network.api.getUnspentOutputs(ADDRESS);
 
@@ -58,7 +58,7 @@ describe('network', () => {
         });
 
         it('resolves to no UTXOs for an empty address', async () => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok([]));
+            vi.spyOn(client, 'get').mockReturnValue(ok([]));
             expect(await network.api.getUnspentOutputs(ADDRESS)).toEqual([]);
         });
     });
@@ -66,7 +66,7 @@ describe('network', () => {
     describe('getTransactions', () => {
 
         it('normalizes transactions to { hash, time, inputs, outputs }', async () => {
-            const get = vi.spyOn(axios, 'get').mockReturnValue(ok(json('txs.json')));
+            const get = vi.spyOn(client, 'get').mockReturnValue(ok(json('txs.json')));
 
             const txs = await network.api.getTransactions([ADDRESS]);
 
@@ -103,7 +103,7 @@ describe('network', () => {
         });
 
         it('gives a coinbase input no address and no value', async () => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok([json('coinbase-tx.json')]));
+            vi.spyOn(client, 'get').mockReturnValue(ok([json('coinbase-tx.json')]));
 
             const [tx] = await network.api.getTransactions([ADDRESS]);
 
@@ -118,7 +118,7 @@ describe('network', () => {
                 [`${BASE}/address/a/txs`]: [oldest, newest],
                 [`${BASE}/address/b/txs`]: [unconfirmed, newest],
             };
-            vi.spyOn(axios, 'get').mockImplementation(url => ok(pages[url]));
+            vi.spyOn(client, 'get').mockImplementation(url => ok(pages[url]));
 
             const txs = await network.api.getTransactions(['a', 'b']);
 
@@ -127,13 +127,13 @@ describe('network', () => {
         });
 
         it('makes no request without addresses', async () => {
-            const get = vi.spyOn(axios, 'get');
+            const get = vi.spyOn(client, 'get');
             expect(await network.api.getTransactions([])).toEqual([]);
             expect(get).not.toHaveBeenCalled();
         });
 
         it('rejects when an address cannot be read', async () => {
-            vi.spyOn(axios, 'get').mockRejectedValue(httpError(400, 'Invalid Bitcoin address'));
+            vi.spyOn(client, 'get').mockRejectedValue(httpError(400, 'Invalid Bitcoin address'));
             await expect(network.api.getTransactions(['x'])).rejects.toThrow('Invalid Bitcoin address');
         });
     });
@@ -141,12 +141,12 @@ describe('network', () => {
     describe('getFee', () => {
 
         it('resolves with the fastestFee rate in sat/vB', async () => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok(json('fees.json')));
+            vi.spyOn(client, 'get').mockReturnValue(ok(json('fees.json')));
             expect(await network.api.getFee()).toBe(1);
         });
 
         it('reads fastestFee and not the slower rates', async () => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok({
+            vi.spyOn(client, 'get').mockReturnValue(ok({
                 fastestFee: 12, halfHourFee: 8, hourFee: 5, economyFee: 2, minimumFee: 1,
             }));
             expect(await network.api.getFee()).toBe(12);
@@ -157,12 +157,12 @@ describe('network', () => {
             ['zero', { fastestFee: 0 }],
             ['not a number', { fastestFee: '12' }],
         ])('rejects when fastestFee is %s', async (what, fees) => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok(fees));
+            vi.spyOn(client, 'get').mockReturnValue(ok(fees));
             await expect(network.api.getFee()).rejects.toThrow('No fee rate available');
         });
 
         it('rejects instead of resolving a zero fee when the API fails', async () => {
-            vi.spyOn(axios, 'get').mockRejectedValue(httpError(502, 'Bad Gateway'));
+            vi.spyOn(client, 'get').mockRejectedValue(httpError(502, 'Bad Gateway'));
             await expect(network.api.getFee()).rejects.toThrow('status code 502: Bad Gateway');
         });
     });
@@ -170,19 +170,19 @@ describe('network', () => {
     describe('getPrice', () => {
 
         it('resolves to the mainnet USD price as a number', async () => {
-            const get = vi.spyOn(axios, 'get').mockReturnValue(ok(json('prices.json')));
+            const get = vi.spyOn(client, 'get').mockReturnValue(ok(json('prices.json')));
 
             expect(await network.api.getPrice()).toBe(85962);
             expect(get).toHaveBeenCalledWith('https://mempool.space/api/v1/prices', undefined);
         });
 
         it('reads other currencies', async () => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok(json('prices.json')));
+            vi.spyOn(client, 'get').mockReturnValue(ok(json('prices.json')));
             expect(await network.api.getPrice('EUR')).toBe(76352);
         });
 
         it('rejects for a currency without a price', async () => {
-            vi.spyOn(axios, 'get').mockReturnValue(ok(json('prices.json')));
+            vi.spyOn(client, 'get').mockReturnValue(ok(json('prices.json')));
             await expect(network.api.getPrice('XYZ')).rejects.toThrow('No XYZ price available');
         });
     });
@@ -191,7 +191,7 @@ describe('network', () => {
 
         it('requests the timespan and normalizes points to { time, price }', async () => {
             const chart = json('market-price.json');
-            const get = vi.spyOn(axios, 'get').mockReturnValue(ok(chart));
+            const get = vi.spyOn(client, 'get').mockReturnValue(ok(chart));
 
             const points = await network.api.getPriceChart('30days');
 
@@ -207,7 +207,7 @@ describe('network', () => {
 
         it('resolves to the raw transaction as text', async () => {
             const hex = text('tx.hex');
-            const get = vi.spyOn(axios, 'get').mockReturnValue(ok(hex));
+            const get = vi.spyOn(client, 'get').mockReturnValue(ok(hex));
             const txid = 'a6873a7d7bccba2d3ee05f48fad654f5fbd33b034e795240c7fab748ae8ee76a';
 
             expect(await network.api.getTxHex(txid)).toBe(hex);
@@ -220,7 +220,7 @@ describe('network', () => {
         it('posts the raw hex as text/plain and resolves to the txid', async () => {
             const hex = text('tx.hex');
             const txid = 'a6873a7d7bccba2d3ee05f48fad654f5fbd33b034e795240c7fab748ae8ee76a';
-            const post = vi.spyOn(axios, 'post').mockReturnValue(ok(txid));
+            const post = vi.spyOn(client, 'post').mockReturnValue(ok(txid));
 
             expect(await network.api.broadcast(hex)).toBe(txid);
             expect(post).toHaveBeenCalledWith(`${BASE}/tx`, hex, {
@@ -232,7 +232,7 @@ describe('network', () => {
         it('rejects with the node error text', async () => {
             const body = text('broadcast-error.txt');
             const failure = httpError(400, body);
-            vi.spyOn(axios, 'post').mockRejectedValue(failure);
+            vi.spyOn(client, 'post').mockRejectedValue(failure);
 
             const error = await network.api.broadcast('deadbeef').catch(e => e);
 
@@ -243,7 +243,7 @@ describe('network', () => {
 
         it('keeps the minimum relay fee error recognizable by the UI', async () => {
             const body = 'sendrawtransaction RPC error: {"code":-26,"message":"min relay fee not met, 0 < 110"}';
-            vi.spyOn(axios, 'post').mockRejectedValue(httpError(400, body));
+            vi.spyOn(client, 'post').mockRejectedValue(httpError(400, body));
 
             const error = await network.api.broadcast('00').catch(e => e);
 
@@ -251,7 +251,7 @@ describe('network', () => {
         });
 
         it('rejects when the request does not reach the API', async () => {
-            vi.spyOn(axios, 'post').mockRejectedValue(new AxiosError('Network Error', AxiosError.ERR_NETWORK));
+            vi.spyOn(client, 'post').mockRejectedValue(new AxiosError('Network Error', AxiosError.ERR_NETWORK));
             await expect(network.api.broadcast('00')).rejects.toThrow(/^Network Error$/);
         });
     });
@@ -268,24 +268,19 @@ describe('network on mainnet', () => {
     const load = (env) => {
         vi.resetModules();
         vi.doMock('../src/env.json', () => ({ default: env }));
-        return import('../src/main/network').then(m => m.default);
+        return import('../src/main/network');
     };
 
     it('uses the bitcoin network and its apiBase from env.json', async () => {
-        const mainnet = await load({
+        const { default: mainnet, client: mainnetClient } = await load({
             network: 'bitcoin',
             apiBase: { bitcoin: 'https://mempool.space/api', testnet: BASE },
         });
-        const get = vi.spyOn(axios, 'get').mockReturnValue(ok(json('utxo.json')));
+        const get = vi.spyOn(mainnetClient, 'get').mockReturnValue(ok(json('utxo.json')));
 
         await mainnet.api.getUnspentOutputs('1BoatSLRHtKNngkdXEeobR76b53LETtpyT');
 
         expect(mainnet.current.bech32).toBe('bc');
         expect(get).toHaveBeenCalledWith('https://mempool.space/api/address/1BoatSLRHtKNngkdXEeobR76b53LETtpyT/utxo', undefined);
-    });
-
-    it('refuses to load without an apiBase for the network', async () => {
-        await expect(load({ network: 'bitcoin', apiBase: { testnet: BASE } }))
-            .rejects.toThrow('No apiBase for bitcoin in env file');
     });
 });

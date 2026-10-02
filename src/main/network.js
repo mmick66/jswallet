@@ -2,11 +2,40 @@ import axios from 'axios';
 import Constants from '../common/constants';
 import chain from '../common/chain';
 import env from '../env.json';
+import { checkApiUrl } from './security/api-allowlist';
 
 
 // Esplora REST API (mempool.space) for the configured network
 const c_apiBase = env.apiBase && env.apiBase[env.network];
-if (!c_apiBase) throw new Error(`No apiBase for ${env.network} in env file`);
+
+/**
+ * Why the API is off, or null. Every configured URL must be https: on an allowed host
+ * (see ./security/api-allowlist). If one is not, no request goes out and every call rejects with
+ * this error, but the wallets stay readable.
+ */
+const c_disabled = (() => {
+    try {
+        if (!c_apiBase) throw new Error(`No apiBase for ${env.network} in env file`);
+        [c_apiBase, Constants.Endpoints.Prices, Constants.Endpoints.PriceChart].forEach(checkApiUrl);
+        return null;
+    } catch (e) {
+        return new Error(`Network features are disabled: ${e.message}`);
+    }
+})();
+if (c_disabled) console.error(c_disabled.message);
+
+/**
+ * The client of every API call. Its interceptor checks each request against the allowlist,
+ * whatever built the URL. It follows no redirect, which could lead to another host: Esplora and
+ * the charts API do not redirect. Only the http adapter honors maxRedirects (fetch follows).
+ */
+export const client = axios.create({ adapter: 'http', maxRedirects: 0 });
+
+client.interceptors.request.use((config) => {
+    if (c_disabled) throw c_disabled;
+    checkApiUrl(client.getUri(config));
+    return config;
+});
 
 /**
  * Keeps the provider's error text (Esplora answers errors with a plain text body,
@@ -22,9 +51,9 @@ const unwrap = (request) => request.then((response) => response.data, (e) => {
     throw toError(e);
 });
 
-const get = (url, config) => unwrap(axios.get(url, config));
+const get = (url, config) => unwrap(client.get(url, config));
 
-const post = (url, data, config) => unwrap(axios.post(url, data, config));
+const post = (url, data, config) => unwrap(client.post(url, data, config));
 
 // Responses that are plain text must not go through axios' JSON parsing
 const asText = { responseType: 'text' };
