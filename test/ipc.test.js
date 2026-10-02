@@ -44,7 +44,7 @@ PREV.version = 2;
 PREV.addInput(new Uint8Array(32).fill(7), 1);
 PREV.addOutput(script(ADDRESS), 60000n);
 const UTXOS = [{ txid: PREV.getId(), vout: 0, value: 60000 }];
-// sat/vB: spending one UTXO with change is 226 vB
+// sat/vB: spending one UTXO to the P2WPKH receiver with change is 223 vB
 const RATE = 10;
 
 // Every string anywhere in a value, to check that no key or password hash crosses IPC
@@ -243,7 +243,7 @@ describe('IPC handlers', () => {
             expect(txid).toBe(tx.getId());
             expect(tx.outs).toEqual([
                 { script: script(RECEIVER), value: 50000n },
-                { script: script(ADDRESS), value: 60000n - 50000n - 2260n },
+                { script: script(ADDRESS), value: 60000n - 50000n - 2230n },
             ]);
 
             const [doc] = await stored();

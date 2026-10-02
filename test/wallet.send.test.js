@@ -32,12 +32,13 @@ const UTXOS = [
     { txid: PREV_TXID, vout: 2, value: 50000 },
 ];
 
-// The fee rate in sat/vB, as network.api.getFee gives it. Spending one UTXO with change is
-// 226 vB, so 2260 sat; spending both is 374 vB, so 3740 sat, or 3400 sat without change.
+// The fee rate in sat/vB, as network.api.getFee gives it. Paying the P2WPKH receiver (31 vB) and
+// the P2PKH change (34 vB) from one UTXO is 223 vB, so 2230 sat; from both is 371 vB, so 3710 sat,
+// or 3370 sat without change.
 const RATE = 10;
 
 // Cross-checked by signing the same transaction by hand, without Psbt
-const EXPECTED_TXID = 'c2dc78d8872ddf97b530fc5c646321dcc881ddb79399fb4a7010167c7703a764';
+const EXPECTED_TXID = 'c9374f0dc5994c1c65966b09dfe6203bf02eaae8831d4ad2601030207fd5e55f';
 
 const txidOf = input => Buffer.from(input.hash).reverse().toString('hex');
 
@@ -74,9 +75,9 @@ describe('Wallet.send', () => {
         expect(tx.ins.map(input => [txidOf(input), input.index])).toEqual([[PREV_TXID, 0], [PREV_TXID, 2]]);
         expect(tx.outs).toEqual([
             { script: script(RECEIVER), value: 80000n },
-            { script: script(ADDRESS), value: 26260n },
+            { script: script(ADDRESS), value: 26290n },
         ]);
-        expect(110000n - tx.outs.reduce((a, out) => a + out.value, 0n)).toBe(3740n);
+        expect(110000n - tx.outs.reduce((a, out) => a + out.value, 0n)).toBe(3710n);
 
         // Every input carries a valid SIGHASH_ALL signature by the wallet's key
         const key = ECPair.fromWIF(WIF, network.current);
@@ -97,19 +98,19 @@ describe('Wallet.send', () => {
         expect(getTxHex).toHaveBeenCalledTimes(1);
         const tx = sent();
         expect(tx.ins.map(input => input.index)).toEqual([0]);
-        expect(tx.outs.map(out => out.value)).toEqual([50000n, 7740n]);
+        expect(tx.outs.map(out => out.value)).toEqual([50000n, 7770n]);
     });
 
     it('leaves change below the dust limit to the fee', async () => {
-        await wallet.send((110000 - 3740 - 545) / 1e8, RECEIVER, RATE);
+        await wallet.send((110000 - 3710 - 545) / 1e8, RECEIVER, RATE);
 
-        expect(sent().outs).toEqual([{ script: script(RECEIVER), value: 105715n }]);
+        expect(sent().outs).toEqual([{ script: script(RECEIVER), value: 105745n }]);
     });
 
     it('keeps change at the dust limit', async () => {
-        await wallet.send((110000 - 3740 - 546) / 1e8, RECEIVER, RATE);
+        await wallet.send((110000 - 3710 - 546) / 1e8, RECEIVER, RATE);
 
-        expect(sent().outs.map(out => out.value)).toEqual([105714n, 546n]);
+        expect(sent().outs.map(out => out.value)).toEqual([105744n, 546n]);
     });
 
     it('signs with the key of an encrypted wallet', async () => {
@@ -139,7 +140,7 @@ describe('Wallet.send', () => {
         };
 
         it('when the UTXOs do not cover the amount and the fee', async () => {
-            await refuses(wallet.send(0.0011, RECEIVER, RATE), 'Not enough funds: 113400 satoshis needed with the fee, 110000 available');
+            await refuses(wallet.send(0.0011, RECEIVER, RATE), 'Not enough funds: 113370 satoshis needed with the fee, 110000 available');
         });
 
         it('when there are no UTXOs', async () => {

@@ -7,8 +7,11 @@ import Wallet from '../src/main/wallet.class';
 // Testnet WIF of private key 1 and its address
 const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';
 const ADDRESS = 'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r';
-// A P2PKH receiver, so that every output has the size that vbytes counts
+// A P2PKH receiver, so that its output has the size of the change
 const RECEIVER = 'mvE8CiixdhZycmZEUR4mUtEiAtnu9PK2YD';
+const P2PKH = 34;
+// The receiver's output and the change
+const OUTPUTS = [P2PKH, P2PKH];
 
 const RATE = 10;
 const VALUES = [60000, 50000, 40000];
@@ -16,8 +19,8 @@ const VALUES = [60000, 50000, 40000];
 describe('vbytes', () => {
 
     it('sizes a P2PKH spend at 10 + 148 per input + 34 per output', () => {
-        expect([1, 2, 3].map(inputs => vbytes(inputs, 2))).toEqual([226, 374, 522]);
-        expect(vbytes(2, 1)).toBe(340);
+        expect([1, 2, 3].map(inputs => vbytes(inputs, OUTPUTS))).toEqual([226, 374, 522]);
+        expect(vbytes(2, [P2PKH])).toBe(340);
     });
 });
 
@@ -28,48 +31,48 @@ describe('planSpend', () => {
         [2, 80000, 3740, 26260],
         [3, 120000, 5220, 24780],
     ])('pays the fee for %i input(s) and change at the rate', (inputs, amount, fee, change) => {
-        expect(planSpend(VALUES, amount, RATE)).toEqual({
+        expect(planSpend(VALUES, amount, RATE, P2PKH)).toEqual({
             covered: true, inputs, fee, change,
         });
-        expect(fee).toBe(RATE * vbytes(inputs, 2));
+        expect(fee).toBe(RATE * vbytes(inputs, OUTPUTS));
     });
 
     it('leaves change below the dust limit to the fee', () => {
-        expect(planSpend(VALUES, 110000 - 3740 - 545, RATE)).toEqual({
+        expect(planSpend(VALUES, 110000 - 3740 - 545, RATE, P2PKH)).toEqual({
             covered: true, inputs: 2, fee: 3740 + 545, change: 0,
         });
     });
 
     it('keeps change at the dust limit', () => {
-        expect(planSpend(VALUES, 110000 - 3740 - 546, RATE)).toEqual({
+        expect(planSpend(VALUES, 110000 - 3740 - 546, RATE, P2PKH)).toEqual({
             covered: true, inputs: 2, fee: 3740, change: 546,
         });
     });
 
     it('sends without change when the inputs cover only the fee for one output', () => {
-        expect(planSpend(VALUES.slice(0, 2), 110000 - 3400, RATE)).toEqual({
+        expect(planSpend(VALUES.slice(0, 2), 110000 - 3400, RATE, P2PKH)).toEqual({
             covered: true, inputs: 2, fee: 3400, change: 0,
         });
     });
 
     it('picks another input when the ones so far cover the amount but not the fee', () => {
         // One input without change would need 1920 sat
-        expect(planSpend(VALUES, 60000 - 1000, RATE)).toEqual({
+        expect(planSpend(VALUES, 60000 - 1000, RATE, P2PKH)).toEqual({
             covered: true, inputs: 2, fee: 3740, change: 110000 - 59000 - 3740,
         });
     });
 
     it('is not covered when all the inputs cannot pay the amount and the fee without change', () => {
-        expect(planSpend(VALUES.slice(0, 2), 110000 - 3399, RATE)).toEqual({
+        expect(planSpend(VALUES.slice(0, 2), 110000 - 3399, RATE, P2PKH)).toEqual({
             covered: false, inputs: 2, fee: 3400, change: 0,
         });
-        expect(planSpend([], 1000, RATE)).toEqual({
-            covered: false, inputs: 0, fee: RATE * vbytes(0, 1), change: 0,
+        expect(planSpend([], 1000, RATE, P2PKH)).toEqual({
+            covered: false, inputs: 0, fee: RATE * vbytes(0, [P2PKH]), change: 0,
         });
     });
 
     it('rounds the fee up at a fractional rate', () => {
-        expect(planSpend(VALUES, 50000, 1.1).fee).toBe(249);
+        expect(planSpend(VALUES, 50000, 1.1, P2PKH).fee).toBe(249);
     });
 });
 
@@ -112,10 +115,10 @@ describe('Wallet.send at a fee rate', () => {
 
         expect(tx.ins).toHaveLength(inputs);
         expect(tx.outs).toHaveLength(2);
-        expect(fee).toBe(BigInt(RATE * vbytes(inputs, 2)));
+        expect(fee).toBe(BigInt(RATE * vbytes(inputs, OUTPUTS)));
         // The estimate is an upper bound: signatures have 71 or 72 bytes
-        expect(tx.virtualSize()).toBeLessThanOrEqual(vbytes(inputs, 2));
-        expect(tx.virtualSize()).toBeGreaterThanOrEqual(vbytes(inputs, 2) - inputs);
+        expect(tx.virtualSize()).toBeLessThanOrEqual(vbytes(inputs, OUTPUTS));
+        expect(tx.virtualSize()).toBeGreaterThanOrEqual(vbytes(inputs, OUTPUTS) - inputs);
     });
 
     it('sends the change below the dust limit to the fee', async () => {

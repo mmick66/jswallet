@@ -5,7 +5,7 @@ import { QrcodeOutlined, UnlockOutlined } from '@ant-design/icons';
 
 import Constants from './common/constants';
 import { isValidAddress } from './common/address';
-import { planSpend } from './common/fee';
+import { outputVbytes, planSpend } from './common/fee';
 import { amountError, toSatoshis } from './common/amount';
 
 // With a sign, so that a negative amount is refused as not more than zero rather than as not numeric
@@ -35,11 +35,13 @@ function CreateTransactionForm({
     const bitcoinsPerDollar = rate || 1.0;
     const toBitcoins = (dollars) => (dollars * bitcoinsPerDollar).toFixed(Constants.Bitcoin.Decimals);
 
-    // Watched so that the fee below the bitcoin field follows the amount
+    // Watched so that the fee below the bitcoin field follows the amount and the receiver
     const bitcoin = Form.useWatch('bitcoin', form);
+    const address = Form.useWatch('address', form);
 
-    // What Wallet.send spends for the amount: the fee for its inputs, and whether the funds cover it
-    const planFor = (btc) => planSpend(sender.utxoValues, toSatoshis(btc), feeRate);
+    // What Wallet.send spends for the amount: the fee for its inputs and the receiver's output, and
+    // whether the funds cover it. Until a valid address is entered, the output is the largest kind.
+    const planFor = (btc) => planSpend(sender.utxoValues, toSatoshis(btc), feeRate, outputVbytes(address));
 
     // Why the amount in bitcoins cannot be sent: not more than zero, below the dust limit, or not covered
     const sendError = (btc) => amountError(toSatoshis(btc)) || (planFor(btc).covered ? undefined : 'Not enough funds');
@@ -55,7 +57,8 @@ function CreateTransactionForm({
     };
 
     // An empty amount is left to the required rule. The dollars field checks the bitcoins it puts in
-    // the bitcoin field, which is the amount sent.
+    // the bitcoin field, which is the amount sent. Both check again when the address changes, as the
+    // receiver's output adds to the fee.
     const checkAmount = (toAmount) => (rule, value) => {
         if (!value) return Promise.resolve();
         if (!isValidNumber(value)) return Promise.reject(new Error('The value is not numeric'));
@@ -79,12 +82,14 @@ function CreateTransactionForm({
             </Form.Item>
 
             <Form.Item name="dollars"
+                       dependencies={['address']}
                        rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount(toBitcoins) }]}>
                 <Input placeholder="Amount in Dollars" prefix="$" />
             </Form.Item>
 
             <Form.Item name="bitcoin"
                        extra={describeFee()}
+                       dependencies={['address']}
                        rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount((btc) => btc) }]}>
                 <Input placeholder="Amount in Bitcoin" prefix="Ƀ" />
             </Form.Item>

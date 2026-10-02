@@ -8,11 +8,13 @@ export default {
         Bitcoin: 'bitcoin',
     },
     Transactions: {
-        // P2PKH sizes in vbytes, see src/common/fee.js
+        // Sizes in vbytes of the transactions this wallet makes, see src/common/fee.js
         Vbytes: {
             Overhead: 10, // version, locktime and the input and output counts
-            Input: 148, // with a compressed key and a signature of at most 72 bytes
-            Output: 34,
+            Input: 148, // P2PKH, with a compressed key and a signature of at most 72 bytes
+            Change: 34, // P2PKH, as the change pays this wallet's address
+            // P2TR and P2WSH, the largest receivers in use (an unassigned witness version allows 51)
+            LargestOutput: 43,
         },
         DustLimit: 546, // satoshis; smaller P2PKH outputs are non-standard
     },

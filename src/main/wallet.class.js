@@ -4,7 +4,7 @@ import Constants from '../common/constants';
 import cipher from './cipher';
 import bitcoin, { bip32, ECPair } from '../common/bitcoin';
 import { isValidAddress } from '../common/address';
-import { planSpend } from '../common/fee';
+import { outputVbytes, planSpend } from '../common/fee';
 import { amountError } from '../common/amount';
 
 import bnet from './network';
@@ -130,8 +130,8 @@ class Wallet {
 
     /**
      * Spends the unspent outputs, in order, until they cover the amount and the fee for the size of
-     * the transaction, as planSpend picks them. The change goes back to this wallet, unless it is
-     * below the dust limit and is left to the fee.
+     * the transaction, with the receiver's output sized by its address type, as planSpend picks them.
+     * The change goes back to this wallet, unless it is below the dust limit and is left to the fee.
      * @param btc The amount in bitcoins
      * @param address The receiver, on the configured network
      * @param rate The fee rate in sat/vB, as network.api.getFee gives it
@@ -148,7 +148,7 @@ class Wallet {
         if (!isValidAddress(address)) throw new Error(`Not a valid ${bnet.name} address: ${address}`);
 
         const values = this.utxos.map((utxo) => utxo.value);
-        const plan = planSpend(values, Number(amount), rate);
+        const plan = planSpend(values, Number(amount), rate, outputVbytes(address));
         if (!plan.covered) {
             const available = values.reduce((a, v) => a + v, 0);
             throw new Error(`Not enough funds: ${Number(amount) + plan.fee} satoshis needed with the fee, ${available} available`);
