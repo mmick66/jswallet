@@ -35,24 +35,26 @@ function CreateTransactionForm({
     const bitcoinsPerDollar = rate || 1.0;
     const toBitcoins = (dollars) => (dollars * bitcoinsPerDollar).toFixed(Constants.Bitcoin.Decimals);
 
-    // Watched so that the fee below the bitcoin field follows the amount and the receiver
+    // Watched so that the fee below the bitcoin field follows the amount and the receiver. Watched values
+    // catch up a macrotask after the form's store, so the checks read the address from the store instead.
     const bitcoin = Form.useWatch('bitcoin', form);
     const address = Form.useWatch('address', form);
 
-    // What Wallet.send spends for the amount: the fee for its inputs and the receiver's output, and
-    // whether the funds cover it. Until a valid address is entered, the output is the largest kind.
-    const planFor = (btc) => planSpend(sender.utxoValues, toSatoshis(btc), feeRate, outputVbytes(address));
+    // What Wallet.send spends for the amount to the receiver: the fee for its inputs and the receiver's
+    // output, and whether the funds cover it. Until a valid address is entered, the output is the largest kind.
+    const planFor = (btc, receiver) => planSpend(sender.utxoValues, toSatoshis(btc), feeRate, outputVbytes(receiver));
 
-    // Why the amount in bitcoins cannot be sent: not more than zero, below the receiver's dust limit (P2PKH's
-    // until a valid address is entered), or not covered
-    const sendError = (btc) => amountError(toSatoshis(btc), address) || (planFor(btc).covered ? undefined : 'Not enough funds');
+    // Why the amount in bitcoins cannot be sent to the receiver: not more than zero, below the receiver's dust
+    // limit (P2PKH's until a valid address is entered), or not covered
+    const sendError = (btc, receiver) => amountError(toSatoshis(btc), receiver)
+        || (planFor(btc, receiver).covered ? undefined : 'Not enough funds');
 
     // The fee for the inputs that the amount needs, or only the rate until the amount can be sent
     const describeFee = () => {
         const atRate = `at ${feeRate} sat/vB`;
         if (!isValidNumber(bitcoin) || amountError(toSatoshis(bitcoin), address)) return `Network fee ${atRate}`;
 
-        const { fee, inputs } = planFor(bitcoin);
+        const { fee, inputs } = planFor(bitcoin, address);
         const bitcoins = (fee / Constants.Bitcoin.Satoshis).toFixed(Constants.Bitcoin.Decimals);
         return `Network fee: Ƀ ${bitcoins} for ${inputs} ${inputs === 1 ? 'input' : 'inputs'} ${atRate}`;
     };
@@ -63,7 +65,7 @@ function CreateTransactionForm({
     const checkAmount = (toAmount) => (rule, value) => {
         if (!value) return Promise.resolve();
         if (!isValidNumber(value)) return Promise.reject(new Error('The value is not numeric'));
-        const error = sendError(toAmount(parseFloat(value)));
+        const error = sendError(toAmount(parseFloat(value)), form.getFieldValue('address'));
         return error ? Promise.reject(new Error(error)) : Promise.resolve();
     };
 
