@@ -3,18 +3,14 @@ import React from 'react';
 import { Input, Icon, Form } from 'antd';
 
 import Constants from './logic/constants';
-
-const bs58 = require('bs58');
+import { isValidAddress } from './logic/address';
 
 const isValidNumber = value => /^-?(0|[1-9][0-9]*)(\.[0-9]*)?$/.test(value);
 
+// An empty address is left to the required rule
 const isValidBitcoinAddress = (rule, value, callback) => {
-    try {
-        bs58.decode(value);
-        callback();
-    } catch (e) {
-        callback(e);
-    }
+    if (!value || isValidAddress(value)) callback();
+    else callback('Not a valid bitcoin address for this network');
 };
 
 class CreateTransactionForm extends React.Component {

@@ -1,4 +1,4 @@
-import bitcoin from 'bitcoinjs-lib';
+import { networks } from 'bitcoinjs-lib';
 import axios from 'axios';
 import Constants from './constants';
 import env from '../env.json';
@@ -8,10 +8,10 @@ let c_network;
 
 switch (env.network) {
 case Constants.Networks.Testnet:
-    c_network = bitcoin.networks.testnet;
+    c_network = networks.testnet;
     break;
 case Constants.Networks.Bitcoin:
-    c_network = bitcoin.networks.bitcoin;
+    c_network = networks.bitcoin;
     break;
 default:
     throw new Error('Unknown network in env file');

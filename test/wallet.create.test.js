@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import golden from './fixtures/wallet/golden-vectors.json';
 
-// Captured from the pre-migration Wallet.create, see fixtures/wallet/capture-golden-vectors.cjs
+// Captured from Wallet.create before the migration to bitcoinjs-lib 7 (jswallet-2cb.5), with
+// bitcoinjs-lib 3.3.2 and bip39 2.6.0 on Node 20. git log -- test/fixtures/wallet has the capture script.
 const { vectors } = golden;
 
 const ENV = {

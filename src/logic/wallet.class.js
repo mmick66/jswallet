@@ -1,13 +1,28 @@
-import bip39 from 'bip39';
-import bitcoin from 'bitcoinjs-lib';
+import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
 
 import EventEmitter from 'events';
 
 import Constants from './constants';
 import cipher from './cipher';
+import bitcoin, { bip32, ECPair } from './bitcoin';
+import { isValidAddress } from './address';
 
 import bnet from './network';
 import Database from './database';
+
+/**
+ * @param btc Bitcoins, as a number or a numeric string
+ * @param what Names the value in the error
+ * @returns {bigint} Satoshis
+ */
+const toSatoshis = (btc, what) => {
+    const given = typeof btc === 'number' || (typeof btc === 'string' && btc.trim() !== '');
+    const satoshis = given ? Math.round(Number(btc) * Constants.Bitcoin.Satoshis) : NaN;
+    if (!Number.isSafeInteger(satoshis) || satoshis < 0) throw new Error(`Not a valid ${what} in bitcoins: ${btc}`);
+    return BigInt(satoshis);
+};
+
+const verifySignature = (pubkey, hash, signature) => ECPair.fromPublicKey(pubkey).verify(hash, signature);
 
 class Wallet extends EventEmitter {
 
@@ -114,36 +129,65 @@ class Wallet extends EventEmitter {
     }
 
 
+    /**
+     * Spends the unspent outputs, in order, until they cover the amount and the fee.
+     * The change goes back to this wallet, unless it is below the dust limit and is left to the fee.
+     * @param btc The amount in bitcoins
+     * @param address The receiver, on the configured network
+     * @param fee The fee in bitcoins
+     * @param password Unlocks the key of an encrypted wallet
+     * @returns {Promise<string>} The txid, once broadcast
+     */
     async send(btc, address, fee, password) {
 
-        const satoshis = Math.round(btc * Constants.Bitcoin.Satoshis);
-        const satoshis_fee = Math.round(fee * Constants.Bitcoin.Satoshis);
+        const amount = toSatoshis(btc, 'amount');
+        const satoshis_fee = toSatoshis(fee, 'fee');
+        const dust = BigInt(Constants.Transactions.DustLimit);
+
+        if (amount === 0n) throw new Error('The amount must be more than zero');
+        if (!isValidAddress(address)) throw new Error(`Not a valid ${bnet.name} address: ${address}`);
+
+        const needed = amount + satoshis_fee;
+        const spent = [];
+        let current = 0n;
+        for (const utxo of this.utxos) {
+            if (current >= needed) break;
+            spent.push(utxo);
+            current += BigInt(utxo.value);
+        }
+
+        if (current < needed) {
+            throw new Error(`Not enough funds: ${needed} satoshis needed with the fee, ${current} available`);
+        }
 
         const network = bnet.current;
 
-        const txb = new bitcoin.TransactionBuilder(network);
-
-        let current = 0;
-        for (const utx of this.utxos) {
-
-            txb.addInput(utx.tx_hash_big_endian, utx.tx_output_n);
-
-            current += utx.value;
-            if (current >= (satoshis + satoshis_fee)) break;
-        }
-
-        txb.addOutput(address, satoshis);
-
-        const change = current - (satoshis + satoshis_fee);
-        if (change) txb.addOutput(this.address, change);
-
-
         const wif = this.__password ? await this.readDecrypted(password) : this.wif;
-        const key = bitcoin.ECPair.fromWIF(wif, network);
+        const key = ECPair.fromWIF(wif, network);
 
-        txb.sign(0, key);
+        const psbt = new bitcoin.Psbt({ network: network });
 
-        const raw = txb.build().toHex();
+        // Legacy P2PKH inputs are signed against the whole previous transaction
+        const previous = await Promise.all(spent.map(utxo => bnet.api.getTxHex(utxo.txid)));
+        spent.forEach((utxo, i) => {
+            const tx = bitcoin.Transaction.fromHex(previous[i]);
+            const output = tx.outs[utxo.vout];
+            if (tx.getId() !== utxo.txid || !output || output.value !== BigInt(utxo.value)) {
+                throw new Error(`The transaction of ${utxo.txid}:${utxo.vout} does not match the unspent output`);
+            }
+            psbt.addInput({ hash: utxo.txid, index: utxo.vout, nonWitnessUtxo: tx.toBuffer() });
+        });
+
+        psbt.addOutput({ address: address, value: amount });
+
+        const change = current - needed;
+        if (change >= dust) psbt.addOutput({ address: this.address, value: change });
+
+        psbt.signAllInputs(key);
+        if (!psbt.validateSignaturesOfAllInputs(verifySignature)) throw new Error('The transaction signatures are not valid');
+        psbt.finalizeAllInputs();
+
+        const raw = psbt.extractTransaction().toHex();
 
         return bnet.api.broadcast(raw);
     }
@@ -162,18 +206,18 @@ class Wallet extends EventEmitter {
 
 
     static generate() {
-        return bip39.generateMnemonic();
+        return generateMnemonic();
     }
 
 
     static create(name, mnemonic) {
 
-        const seed = bip39.mnemonicToSeed(mnemonic);
+        const seed = mnemonicToSeedSync(mnemonic);
 
-        const master = bitcoin.HDNode.fromSeedBuffer(seed, bnet.current);
+        const master = bip32.fromSeed(seed, bnet.current);
         const derived = master.derivePath(Wallet.Defaults.Path);
-        const address = derived.getAddress();
-        const wif = derived.keyPair.toWIF();
+        const { address } = bitcoin.payments.p2pkh({ pubkey: derived.publicKey, network: bnet.current });
+        const wif = derived.toWIF();
 
         return new Wallet({
             name: name,

@@ -8,7 +8,8 @@ export default {
         Bitcoin: 'bitcoin',
     },
     Transactions: {
-        AverageBytes: 255
+        AverageBytes: 255,
+        DustLimit: 546, // satoshis; smaller P2PKH outputs are non-standard
     },
     Endpoints: {
         Fees: '/v1/fees/recommended', // relative to the network's apiBase in env.json

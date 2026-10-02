@@ -53,12 +53,14 @@
     }
   },
   "dependencies": {
+    "@bitcoinerlab/secp256k1": "^2.0.0",
     "@seald-io/nedb": "^4.1.2",
     "antd": "^3.2.0",
     "axios": "^1.20.0",
-    "bip39": "^2.5.0",
-    "bitcoinjs-lib": "^3.3.2",
-    "bs58": "^4.0.1",
+    "bip32": "^5.0.1",
+    "bip39": "^3.1.0",
+    "bitcoinjs-lib": "^7.0.2",
+    "ecpair": "^3.0.2",
     "electron-compile": "^6.4.2",
     "electron-devtools-installer": "^2.1.0",
     "electron-squirrel-startup": "^1.0.0",
