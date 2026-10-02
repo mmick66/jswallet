@@ -15,7 +15,7 @@
     "publish": "electron-forge release",
     "lint": "eslint --cache src",
     "test": "vitest run",
-    "audit": "npm audit --omit=dev --audit-level=high",
+    "audit": "npm audit --omit=dev --audit-level=high && node scripts/audit-electron.mjs --audit-level=high",
     "check": "npm run lint && npm test"
   },
   "keywords": [],
