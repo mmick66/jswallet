@@ -8,11 +8,16 @@ import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-insta
 import Wallet from './main/wallet.class';
 import { createIpcHandlers, registerIpcHandlers } from './main/ipc';
 import { databaseDirectory, migrateLegacyDatabase } from './main/storage';
+import mainWindowOptions from './main/security/window-options';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
     app.quit();
 }
+
+// Sandbox every renderer, including any created later, whatever its own webPreferences say.
+// It only takes effect before the app is ready.
+app.enableSandbox();
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -30,16 +35,8 @@ const installDevTools = async () => {
 const createWindow = () => {
 
     // Create the browser window.
-    mainWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
-        // The renderer gets no Node: it reaches the wallets through window.jswallet (src/preload.js)
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.cjs'),
-            contextIsolation: true,
-            sandbox: true,
-        }
-    });
+    // The renderer gets no Node: it reaches the wallets through window.jswallet (src/preload.js)
+    mainWindow = new BrowserWindow(mainWindowOptions({ preload: path.join(__dirname, 'preload.cjs') }));
 
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
