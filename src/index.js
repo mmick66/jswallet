@@ -7,6 +7,7 @@ import started from 'electron-squirrel-startup';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import Wallet from './main/wallet.class';
 import { createIpcHandlers, registerIpcHandlers } from './main/ipc';
+import { registerNavigationGuards } from './main/security/navigation';
 import { databaseDirectory, migrateLegacyDatabase } from './main/storage';
 import mainWindowOptions from './main/security/window-options';
 import { APP_INDEX_URL, handleAppProtocol, registerAppScheme } from './main/security/app-protocol';
@@ -23,6 +24,9 @@ app.enableSandbox();
 // The packaged renderer is served from app://jswallet, not file:// (src/main/security/app-protocol.js).
 // Like the sandbox, the scheme's privileges must be set before the app is ready.
 registerAppScheme();
+
+// The window never navigates or opens another; this has to come before the first web contents.
+registerNavigationGuards(app);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
