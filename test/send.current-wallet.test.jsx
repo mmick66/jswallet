@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { App, Form } from 'antd';
 
 import './support/antd-dom';
+import paste from './support/paste';
 import CreateTransactionForm from '../src/create.transaction.modal.component';
 import WalletsContent from '../src/wallets.content.component';
 
@@ -157,9 +158,9 @@ describe('WalletsContent passes the current wallet to the send form', () => {
     };
 
     const fillSendForm = async (user, btc) => {
-        await user.type(field.address(), RECEIVER);
+        await paste(user, field.address(), RECEIVER);
         await user.type(field.bitcoin(), btc);
-        await user.type(field.password(), 'secret');
+        await paste(user, field.password(), 'secret');
     };
 
     it('clears the error of the first wallet when Send opens for one that covers the amount', async () => {

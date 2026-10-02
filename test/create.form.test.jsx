@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { Form } from 'antd';
 
 import './support/antd-dom';
+import paste from './support/paste';
 import CreateForm from '../src/create.form.modal.component';
 
 // The create-wallet form as WalletsContent hosts it: the parent owns the instance and validates it
@@ -49,8 +50,8 @@ describe('CreateForm', () => {
         const { form } = renderForm();
 
         await user.type(screen.getByPlaceholderText('Wallet Name'), 'Savings');
-        await user.type(screen.getByPlaceholderText('Password'), 'correct horse');
-        await user.type(screen.getByPlaceholderText('Confirm Password'), 'correct horse');
+        await paste(user, screen.getByPlaceholderText('Password'), 'correct horse');
+        await paste(user, screen.getByPlaceholderText('Confirm Password'), 'correct horse');
 
         expect(await validate(form)).toEqual({ name: 'Savings', password: 'correct horse', confirm: 'correct horse' });
         expect(screen.queryByText(Errors.Mismatch)).toBeNull();
@@ -61,8 +62,8 @@ describe('CreateForm', () => {
         const { form } = renderForm();
 
         await user.type(screen.getByPlaceholderText('Wallet Name'), 'Savings');
-        await user.type(screen.getByPlaceholderText('Password'), 'correct horse');
-        await user.type(screen.getByPlaceholderText('Confirm Password'), 'correct hose');
+        await paste(user, screen.getByPlaceholderText('Password'), 'correct horse');
+        await paste(user, screen.getByPlaceholderText('Confirm Password'), 'correct hose');
 
         expect(await screen.findByText(Errors.Mismatch)).toBeTruthy();
         expect(await validate(form)).toEqual({ errors: { confirm: [Errors.Mismatch] } });
@@ -73,8 +74,8 @@ describe('CreateForm', () => {
         const { form } = renderForm();
         const password = screen.getByPlaceholderText('Password');
 
-        await user.type(password, 'correct hose');
-        await user.type(screen.getByPlaceholderText('Confirm Password'), 'correct horse');
+        await paste(user, password, 'correct hose');
+        await paste(user, screen.getByPlaceholderText('Confirm Password'), 'correct horse');
         expect(await screen.findByText(Errors.Mismatch)).toBeTruthy();
 
         // Now the confirmation matches, without editing it

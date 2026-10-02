@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { Form } from 'antd';
 
 import './support/antd-dom';
+import paste from './support/paste';
 import CreateTransactionForm from '../src/create.transaction.modal.component';
 
 // Testnet addresses of each type and the dust limit of an output that pays it, in satoshis
@@ -59,7 +60,7 @@ describe('CreateTransactionForm and the receiver\'s dust limit', () => {
         const user = userEvent.setup();
         const { form } = renderForm();
 
-        await user.type(field.address(), address);
+        await paste(user, field.address(), address);
         await user.type(field.bitcoin(), bitcoins(limit - 1));
         expect(await screen.findByText(dust(limit))).toBeTruthy();
         expect((await errorsOf(form)).bitcoin).toEqual([dust(limit)]);
@@ -89,13 +90,13 @@ describe('CreateTransactionForm and the receiver\'s dust limit', () => {
         const { form } = renderForm();
 
         // $0.15 is Ƀ 0.00000300, enough for P2WPKH but not for P2PKH
-        await user.type(field.address(), P2WPKH);
+        await paste(user, field.address(), P2WPKH);
         await user.type(field.dollars(), '0.15');
         expect(field.bitcoin().value).toBe(bitcoins(300));
         expect(await errorsOf(form)).not.toHaveProperty('dollars');
 
         await user.clear(field.address());
-        await user.type(field.address(), P2PKH);
+        await paste(user, field.address(), P2PKH);
         await waitFor(() => expect(screen.getAllByText(dust(546))).toHaveLength(2));
         expect(await errorsOf(form)).toMatchObject({ dollars: [dust(546)], bitcoin: [dust(546)] });
     });
@@ -108,7 +109,7 @@ describe('CreateTransactionForm and the receiver\'s dust limit', () => {
         expect(screen.getByText('Network fee at 2 sat/vB')).toBeTruthy();
 
         // One input, the P2WPKH output and the change: 223 vbytes at 2 sat/vB
-        await user.type(field.address(), P2WPKH);
+        await paste(user, field.address(), P2WPKH);
         expect(screen.getByText('Network fee: Ƀ 0.00000446 for 1 input at 2 sat/vB')).toBeTruthy();
     });
 });

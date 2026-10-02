@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from 'antd';
 
 import './support/antd-dom';
+import paste from './support/paste';
 import Constants from '../src/common/constants';
 import WalletsContent from '../src/wallets.content.component';
 
@@ -133,9 +134,9 @@ describe('WalletsContent', () => {
             .findByText('Not enough funds');
 
         const fillSendForm = async (user, btc) => {
-            await user.type(screen.getByPlaceholderText("Receiver's Address"), RECEIVER);
+            await paste(user, screen.getByPlaceholderText("Receiver's Address"), RECEIVER);
             await user.type(screen.getByPlaceholderText('Amount in Bitcoin'), btc);
-            await user.type(screen.getByPlaceholderText('Unlock'), 'secret');
+            await paste(user, screen.getByPlaceholderText('Unlock'), 'secret');
         };
 
         it('converts at the loaded price and sends the bitcoin amount', async () => {
@@ -146,8 +147,8 @@ describe('WalletsContent', () => {
             await user.click(sendButtonOf(SMALL));
             await user.type(await screen.findByPlaceholderText('Amount in Dollars'), '100');
             expect(screen.getByPlaceholderText('Amount in Bitcoin').value).toBe('0.00200000');
-            await user.type(screen.getByPlaceholderText("Receiver's Address"), RECEIVER);
-            await user.type(screen.getByPlaceholderText('Unlock'), 'secret');
+            await paste(user, screen.getByPlaceholderText("Receiver's Address"), RECEIVER);
+            await paste(user, screen.getByPlaceholderText('Unlock'), 'secret');
             await user.click(screen.getByRole('button', { name: 'Send' }));
 
             await waitFor(() => expect(jswallet.sendPayment).toHaveBeenCalledWith({
@@ -202,8 +203,8 @@ describe('WalletsContent', () => {
             expect(jswallet.createWallet).not.toHaveBeenCalled();
 
             await user.type(within(dialog).getByPlaceholderText('Wallet Name'), 'Fresh');
-            await user.type(within(dialog).getByPlaceholderText('Password'), 'correct horse');
-            await user.type(within(dialog).getByPlaceholderText('Confirm Password'), 'correct horse');
+            await paste(user, within(dialog).getByPlaceholderText('Password'), 'correct horse');
+            await paste(user, within(dialog).getByPlaceholderText('Confirm Password'), 'correct horse');
             await user.click(within(dialog).getByRole('button', { name: 'Create' }));
 
             await waitFor(() => expect(jswallet.createWallet).toHaveBeenCalledWith({ name: 'Fresh', password: 'correct horse' }));

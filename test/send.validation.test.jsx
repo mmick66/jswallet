@@ -8,6 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { App } from 'antd';
 
 import './support/antd-dom';
+import paste from './support/paste';
 import Constants from '../src/common/constants';
 import WalletsContent from '../src/wallets.content.component';
 
@@ -59,11 +60,13 @@ const openSendForm = async (user) => {
     return screen.findByRole('dialog');
 };
 
-// Types the valid values with the given ones in their place; an empty value leaves the field empty
+// Enters the valid values with the given ones in their place; an empty value leaves the field empty. Types
+// the amount and pastes the address and the password.
 const fillSendForm = async (user, dialog, values) => {
     const entries = Object.entries({ ...VALID, ...values }).filter(([, value]) => value);
     for (const [name, value] of entries) {
-        await user.type(within(dialog).getByPlaceholderText(Placeholders[name]), value);
+        const element = within(dialog).getByPlaceholderText(Placeholders[name]);
+        await (name === 'bitcoin' ? user.type(element, value) : paste(user, element, value));
     }
 };
 

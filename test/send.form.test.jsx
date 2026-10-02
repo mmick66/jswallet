@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { Form } from 'antd';
 
 import './support/antd-dom';
+import paste from './support/paste';
 import CreateTransactionForm from '../src/create.transaction.modal.component';
 
 const TESTNET_ADDRESS = 'tb1qur7330emxypadqvr0mu4989sfzw32gpkxgyd2m';
@@ -77,9 +78,9 @@ describe('CreateTransactionForm', () => {
         const user = userEvent.setup();
         const { form } = renderForm();
 
-        await user.type(field.address(), TESTNET_ADDRESS);
+        await paste(user, field.address(), TESTNET_ADDRESS);
         await user.type(field.bitcoin(), '0.005');
-        await user.type(field.password(), 'secret');
+        await paste(user, field.password(), 'secret');
 
         expect(await validate(form)).toEqual({
             address: TESTNET_ADDRESS, dollars: '250.00', bitcoin: '0.005', password: 'secret',
@@ -94,7 +95,7 @@ describe('CreateTransactionForm', () => {
         const user = userEvent.setup();
         const { form } = renderForm();
 
-        await user.type(field.address(), address);
+        await paste(user, field.address(), address);
 
         expect(await screen.findByText(Errors.InvalidAddress)).toBeTruthy();
         expect((await validate(form)).errors.address).toEqual([Errors.InvalidAddress]);
