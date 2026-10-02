@@ -1,5 +1,5 @@
 {
-  "check": "npm run check",
+  "check": "npm ci --strict-allow-scripts --prefer-offline --no-audit --no-fund && npm run check",
   "check_timeout": "30m",
   "concurrent": 4,
   "mcp_servers": []
