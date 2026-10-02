@@ -52,6 +52,7 @@ class WalletsContent extends React.Component {
             modalOpenCreate: false,
             modalOpenSend: false,
             price: 1.0,
+            fee: null,
             total: 0.0,
             wallets: [],
             sendingPayment: false,
@@ -73,15 +74,7 @@ class WalletsContent extends React.Component {
             console.log(e);
         });
 
-        bnet.api.getFee().then((fee) => {
-            console.log(fee);
-            this.fee = fee;
-        }).catch((e) => {
-            console.log('Could not get fee ', e);
-            // Wallet.send needs a number; a zero fee makes the node reject the transaction
-            this.fee = 0;
-        });
-
+        this.loadFee();
 
         Wallet.all().then((wallets) => {
 
@@ -98,6 +91,16 @@ class WalletsContent extends React.Component {
         }, (e) => {
             console.log(e);
             message.error('Could not load wallets from database');
+        });
+    }
+
+    // Send stays disabled until a fee has loaded: Wallet.send needs a number, and a zero fee
+    // makes the node reject the transaction. On failure keep the last fee; Reload retries.
+    loadFee() {
+        bnet.api.getFee().then((fee) => {
+            this.setState({ fee: fee });
+        }).catch((e) => {
+            console.log('Could not get fee ', e);
         });
     }
 
@@ -155,7 +158,7 @@ class WalletsContent extends React.Component {
             }
 
             this.state.sourceWallet.send(
-                values.bitcoin, values.address, this.fee, values.password
+                values.bitcoin, values.address, this.state.fee, values.password
             ).then(() => {
                 message.success(Constants.Messages.Transactions.Sent);
                 this.handleReload();
@@ -187,6 +190,7 @@ class WalletsContent extends React.Component {
 
     handleReload() {
         this.state.wallets.forEach(updateWallet);
+        this.loadFee();
     }
 
 
@@ -231,7 +235,7 @@ class WalletsContent extends React.Component {
             { title: 'Bitcoins', dataIndex: 'coins', key: 'coins' },
             { title: 'Send', key: 'send', render: (r) => {
                 return (
-                        <Button disabled={this.fees > 0} onClick={e => openSendModal(e, r)} icon="login" />
+                        <Button disabled={!(this.state.fee > 0)} onClick={e => openSendModal(e, r)} icon="login" />
                     );
                 }
             },
@@ -293,7 +297,7 @@ class WalletsContent extends React.Component {
                     <CreateTransaction
                         ref={form => (this.form = form)}
                         sender={this.state.sourceWallet}
-                        fees={this.fee}
+                        fees={this.state.fee}
                         rate={1.0 / this.state.price} />
                 </Modal>
 
