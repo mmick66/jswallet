@@ -26,6 +26,3 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run audit
-        # Advisory until jswallet-2cb.9 (antd 6) and jswallet-2cb.10 (recharts 3)
-        # drop antd 3 and recharts 1, whose dependencies have high-severity advisories.
-        continue-on-error: true
