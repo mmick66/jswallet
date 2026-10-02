@@ -1,38 +1,36 @@
-import Datastore from 'nedb';
-import Wallet from './wallet.class';
+import path from 'path';
+import Datastore from '@seald-io/nedb';
 
 
 class Database {
 
-    constructor(name) {
-        this.db = new Datastore({ filename: `./db/${name}.db`, autoload: true });
+    /**
+     * @param name The file name without extension
+     * @param dir The directory holding the file, relative to the working directory
+     */
+    constructor(name, dir = './db') {
+        this.db = new Datastore({ filename: path.join(dir, `${name}.db`), autoload: true });
     }
 
     find(q) {
-        return new Promise((res, rej) => {
-            this.db.find(q || {}, (err, docs) => {
-                if (err) rej(err);
-                res(docs);
-            });
-        });
+        return this.db.findAsync(q || {});
     }
 
     insert(obj) {
-        return new Promise((res, rej) => {
-            this.db.insert(obj, (err) => {
-                if (err) rej(err);
-                res();
-            });
-        });
+        return this.db.insertAsync(obj);
     }
 
     remove(q) {
-        return new Promise((res, rej) => {
-            this.db.remove(q, (err) => {
-                if (err) rej(err);
-                res();
-            });
-        });
+        return this.db.removeAsync(q);
+    }
+
+    /**
+     * @param q Query selecting the document to update; only the first match is updated
+     * @param update A replacement document or a set of modifiers such as $set
+     * @returns {Promise<number>} The number of documents updated
+     */
+    update(q, update) {
+        return this.db.updateAsync(q, update).then(({ numAffected }) => numAffected);
     }
 
 }

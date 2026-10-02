@@ -1,5 +1,4 @@
 import React from 'react';
-import Datastore from 'nedb';
 
 import { Button, Icon, Table, Modal, message } from 'antd';
 
@@ -21,8 +20,6 @@ class PaymentsContent extends React.Component {
 
         this.showDetails = this.showDetails.bind(this);
         this.handleOk = this.handleOk.bind(this);
-
-        this.db = new Datastore({ filename: './db/wallets.db', autoload: true });
     }
 
     componentDidMount() {
