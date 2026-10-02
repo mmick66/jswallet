@@ -21,16 +21,4 @@ export function contentSecurityPolicyMeta() {
 // https://vitejs.dev/config
 export default defineConfig({
     plugins: [react(), contentSecurityPolicyMeta()],
-    define: {
-        // draft-js, which antd 3 bundles for its Mention component, reads Node's `global`.
-        global: 'globalThis',
-    },
-    resolve: {
-        alias: [
-            // antd 3 registers every export of this CommonJS module as an icon, but Vite's
-            // interop adds a `default` export that is not one. The ES entry exports only the
-            // icons. Remove with antd 3 (jswallet-2cb.9).
-            { find: /^@ant-design\/icons\/lib\/dist$/, replacement: '@ant-design/icons/lib/index.es.js' },
-        ],
-    },
 });

@@ -32,7 +32,6 @@
     "bitcoinjs-lib": "^7.0.2",
     "ecpair": "^3.0.2",
     "electron-squirrel-startup": "^1.0.1",
-    "events": "^3.3.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-is": "^19.3.0",
