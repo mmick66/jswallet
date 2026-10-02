@@ -23,6 +23,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-      - run: npm ci
+      # Fails before any install script runs when a dependency's script isn't
+      # covered by package.json allowScripts (see test/allow-scripts.test.js).
+      - run: npm ci --strict-allow-scripts
       - run: npm run check
       - run: npm run audit
