@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "jswallet",
+  "project_id": "3e7162cd-ab79-4b5d-8872-ebd034de5b58"
+}
