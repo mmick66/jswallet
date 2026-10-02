@@ -34,6 +34,13 @@ const electron = vi.hoisted(() => {
         // Answers with the URL it fetched, to tell which file was served
         net: { fetch: vi.fn(url => Promise.resolve(new Response(url))) },
         protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
+        session: {
+            defaultSession: {
+                setPermissionRequestHandler: vi.fn(),
+                setPermissionCheckHandler: vi.fn(),
+                setDevicePermissionHandler: vi.fn(),
+            },
+        },
     };
 });
 

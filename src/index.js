@@ -1,6 +1,6 @@
 /* global MAIN_WINDOW_VITE_DEV_SERVER_URL, MAIN_WINDOW_VITE_NAME */
 import {
-    app, BrowserWindow, clipboard, ipcMain
+    app, BrowserWindow, clipboard, ipcMain, session
 } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
@@ -14,6 +14,7 @@ import mainWindowOptions from './main/security/window-options';
 import {
     APP_INDEX_URL, APP_ORIGIN, handleAppProtocol, registerAppScheme
 } from './main/security/app-protocol';
+import { registerPermissionHandlers } from './main/security/permissions';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -85,6 +86,9 @@ app.whenReady().then(async () => {
 
     // app://jswallet serves the renderer's build directory, and nothing else
     handleAppProtocol(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}`));
+
+    // No camera, location, notifications, devices and so on: only clipboard writes from the renderer
+    registerPermissionHandlers(session.defaultSession, { rendererOrigin, logDenied: !app.isPackaged });
 
     const handle = createIpcHandle({ ipcMain, getMainFrame: mainFrame, origin: rendererOrigin });
     registerIpcHandlers(handle, createIpcHandlers({

@@ -37,6 +37,13 @@ const electron = vi.hoisted(() => {
         ipcMain: { handle: vi.fn(), on: vi.fn() },
         net: { fetch: vi.fn() },
         protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
+        session: {
+            defaultSession: {
+                setPermissionRequestHandler: vi.fn(),
+                setPermissionCheckHandler: vi.fn(),
+                setDevicePermissionHandler: vi.fn(),
+            },
+        },
     };
 });
 
