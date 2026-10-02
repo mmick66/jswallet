@@ -80,7 +80,7 @@ describe('Send Money with an invalid form', () => {
         ['no amount', { bitcoin: '' }, 'bitcoin', 'Please input an amount!'],
         ['a negative amount', { bitcoin: '-0.001' }, 'bitcoin', 'The amount must be more than zero'],
         ['a zero amount', { bitcoin: '0' }, 'bitcoin', 'The amount must be more than zero'],
-        ['a dust amount', { bitcoin: '0.000001' }, 'bitcoin', 'The amount must be at least Ƀ 0.00000546'],
+        ['a dust amount', { bitcoin: '0.000001' }, 'bitcoin', 'The amount must be at least Ƀ 0.00000294'],
         ['more than the wallet holds', { bitcoin: '0.1' }, 'bitcoin', 'Not enough funds'],
         ['no password', { password: '' }, 'password', 'Please input a password'],
     ])('shows what is wrong with %s under the field and no toast', async (_, values, name, error) => {

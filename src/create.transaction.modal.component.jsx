@@ -43,13 +43,14 @@ function CreateTransactionForm({
     // whether the funds cover it. Until a valid address is entered, the output is the largest kind.
     const planFor = (btc) => planSpend(sender.utxoValues, toSatoshis(btc), feeRate, outputVbytes(address));
 
-    // Why the amount in bitcoins cannot be sent: not more than zero, below the dust limit, or not covered
-    const sendError = (btc) => amountError(toSatoshis(btc)) || (planFor(btc).covered ? undefined : 'Not enough funds');
+    // Why the amount in bitcoins cannot be sent: not more than zero, below the receiver's dust limit (P2PKH's
+    // until a valid address is entered), or not covered
+    const sendError = (btc) => amountError(toSatoshis(btc), address) || (planFor(btc).covered ? undefined : 'Not enough funds');
 
     // The fee for the inputs that the amount needs, or only the rate until the amount can be sent
     const describeFee = () => {
         const atRate = `at ${feeRate} sat/vB`;
-        if (!isValidNumber(bitcoin) || amountError(toSatoshis(bitcoin))) return `Network fee ${atRate}`;
+        if (!isValidNumber(bitcoin) || amountError(toSatoshis(bitcoin), address)) return `Network fee ${atRate}`;
 
         const { fee, inputs } = planFor(bitcoin);
         const bitcoins = (fee / Constants.Bitcoin.Satoshis).toFixed(Constants.Bitcoin.Decimals);
@@ -58,7 +59,7 @@ function CreateTransactionForm({
 
     // An empty amount is left to the required rule. The dollars field checks the bitcoins it puts in
     // the bitcoin field, which is the amount sent. Both check again when the address changes, as the
-    // receiver's output adds to the fee.
+    // receiver's output adds to the fee and sets the dust limit.
     const checkAmount = (toAmount) => (rule, value) => {
         if (!value) return Promise.resolve();
         if (!isValidNumber(value)) return Promise.reject(new Error('The value is not numeric'));

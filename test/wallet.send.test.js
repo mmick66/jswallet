@@ -160,8 +160,8 @@ describe('Wallet.send', () => {
             await refuses(wallet.send('0.00000000', RECEIVER, RATE), 'The amount must be more than zero');
         });
 
-        it('when the amount is below the dust limit', async () => {
-            await refuses(wallet.send('0.00000545', RECEIVER, RATE), 'The amount must be at least Ƀ 0.00000546');
+        it('when the amount is below the dust limit of the P2WPKH receiver', async () => {
+            await refuses(wallet.send('0.00000293', RECEIVER, RATE), 'The amount must be at least Ƀ 0.00000294');
         });
 
         it('when the receiver is not an address on this network', async () => {

@@ -143,9 +143,10 @@ class Wallet {
         const amount = toSatoshis(btc, 'amount');
 
         if (typeof rate !== 'number' || !Number.isFinite(rate) || rate <= 0) throw new Error(`Not a valid fee rate in sat/vB: ${rate}`);
-        const tooSmall = amountError(Number(amount));
-        if (tooSmall) throw new Error(tooSmall);
         if (!isValidAddress(address)) throw new Error(`Not a valid ${bnet.name} address: ${address}`);
+        // The dust limit depends on the receiver's output type
+        const tooSmall = amountError(Number(amount), address);
+        if (tooSmall) throw new Error(tooSmall);
 
         const values = this.utxos.map((utxo) => utxo.value);
         const plan = planSpend(values, Number(amount), rate, outputVbytes(address));

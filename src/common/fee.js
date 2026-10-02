@@ -2,7 +2,20 @@ import Constants from './constants';
 import bitcoin from './bitcoin';
 import chain from './chain';
 
-const { Vbytes, DustLimit } = Constants.Transactions;
+const { Vbytes, Dust, DustLimit } = Constants.Transactions;
+const { opcodes } = bitcoin;
+
+// The script that pays the address, or undefined if it is not a valid address on the configured network
+const outputScript = (address) => {
+    try {
+        return bitcoin.address.toOutputScript(address, chain.current);
+    } catch (e) {
+        return undefined;
+    }
+};
+
+// Its 8-byte value, the script's length in one byte, and the script
+const scriptOutputVbytes = (script) => 9 + script.length;
 
 /**
  * The size in vbytes of the output that pays the address: its 8-byte value, the script's length in
@@ -12,11 +25,29 @@ const { Vbytes, DustLimit } = Constants.Transactions;
  * that the fee is not too low for the usual receivers
  */
 export const outputVbytes = (address) => {
-    try {
-        return 9 + bitcoin.address.toOutputScript(address, chain.current).length;
-    } catch (e) {
-        return Vbytes.LargestOutput;
-    }
+    const script = outputScript(address);
+    return script ? scriptOutputVbytes(script) : Vbytes.LargestOutput;
+};
+
+// As Bitcoin Core tells a witness program: a version, OP_0 to OP_16, and a push of the other 2 to 40 bytes
+const isWitnessProgram = (script) => script.length >= 4 && script.length <= 42
+    && (script[0] === opcodes.OP_0 || (script[0] >= opcodes.OP_1 && script[0] <= opcodes.OP_16))
+    && script[1] + 2 === script.length;
+
+/**
+ * The smallest amount that the output paying the address can hold for nodes to relay the transaction,
+ * as Bitcoin Core counts it: 3 sat/vB for the output and an input that spends it, which is smaller for
+ * a witness program. So it depends on the type, not only on the size: P2WPKH (31 vbytes) is 294
+ * satoshis, P2SH (32 vbytes) 540, P2PKH 546, P2TR and P2WSH 330.
+ * @param address The receiver, on the configured network
+ * @returns {number} In satoshis; DustLimit, P2PKH's and the largest of the standard types, if it is
+ * not a valid address, as before one is entered, so that it holds for every receiver
+ */
+export const dustLimit = (address) => {
+    const script = outputScript(address);
+    if (!script) return DustLimit;
+    const spend = isWitnessProgram(script) ? Dust.WitnessSpend : Dust.Spend;
+    return Dust.Rate * (scriptOutputVbytes(script) + spend);
 };
 
 /**

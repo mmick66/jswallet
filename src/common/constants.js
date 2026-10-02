@@ -17,6 +17,12 @@ export default {
             LargestOutput: 43,
         },
         DustLimit: 546, // satoshis; smaller P2PKH outputs are non-standard
+        // Bitcoin Core's dust limit of an output, by its type, see dustLimit in src/common/fee.js
+        Dust: {
+            Rate: 3, // sat/vB, the default -dustrelayfee
+            Spend: 148, // vbytes of an input that spends the output, as Bitcoin Core counts it
+            WitnessSpend: 67, // the same for a witness program: a quarter of its 107-byte witness, rounded down
+        },
     },
     Endpoints: {
         Fees: '/v1/fees/recommended', // relative to the network's apiBase in env.json
