@@ -49,10 +49,12 @@ function CreateTransactionForm({
     const sendError = (btc, receiver) => amountError(toSatoshis(btc), receiver)
         || (planFor(btc, receiver).covered ? undefined : 'Not enough funds');
 
-    // The fee for the inputs that the amount needs, or only the rate until the amount can be sent
+    // The fee for the inputs that the amount needs, or only the rate until the amount can be sent. Not
+    // even when the funds fall short: a fee for spending every output, none on an empty wallet, is not one
+    // that a transaction would pay.
     const describeFee = () => {
         const atRate = `at ${feeRate} sat/vB`;
-        if (!isValidNumber(bitcoin) || amountError(toSatoshis(bitcoin), address)) return `Network fee ${atRate}`;
+        if (!isValidNumber(bitcoin) || sendError(bitcoin, address)) return `Network fee ${atRate}`;
 
         const { fee, inputs } = planFor(bitcoin, address);
         const bitcoins = (fee / Constants.Bitcoin.Satoshis).toFixed(Constants.Bitcoin.Decimals);

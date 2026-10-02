@@ -237,8 +237,9 @@ describe('CreateTransactionForm', () => {
 
             // 470 satoshis at 2 sat/vB leave change; at 100 sat/vB even the 20,100 without change are more than
             // the 10,000 the balance has to spare
+            expect(screen.getByText('Network fee: Ƀ 0.00000470 for 1 input at 2 sat/vB')).toBeTruthy();
             rerender({ feeRate: 100 });
-            expect(screen.getByText('Network fee: Ƀ 0.00020100 for 1 input at 100 sat/vB')).toBeTruthy();
+            expect(screen.getByText('Network fee at 100 sat/vB')).toBeTruthy();
             expect((await validate(form)).errors.bitcoin).toEqual([Errors.NotEnough]);
         });
 
