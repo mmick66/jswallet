@@ -3,6 +3,7 @@ import React from 'react';
 import { Button, Icon, Table, Modal, message } from 'antd';
 
 import TransactionDisplay from './transaction.display';
+import toPaymentRows from './payments.rows';
 import Wallet from './logic/wallet.class';
 import net from './logic/network';
 
@@ -16,7 +17,7 @@ class PaymentsContent extends React.Component {
             modalOpenTransactionDetails: false,
         };
 
-        this.wallets = {};
+        this.wallets = [];
 
         this.showDetails = this.showDetails.bind(this);
         this.handleOk = this.handleOk.bind(this);
@@ -29,8 +30,10 @@ class PaymentsContent extends React.Component {
             this.wallets = wallets;
 
             net.api.getTransactions(wallets.map(w => w.address)).then((txs) => {
-                console.log(txs);
                 this.transactions = txs;
+            }).catch((e) => {
+                console.log(e);
+                message.error('Could not load payments');
             });
         });
     }
@@ -40,36 +43,8 @@ class PaymentsContent extends React.Component {
 
         this._transactions = txs;
 
-        const addressToWallet = {};
-        this.wallets.forEach((w) => {
-            addressToWallet[w.address] = w;
-        });
-
-        const payments = [];
-
-        // transactions come in the order of the addresses passed
-        txs.forEach((tx, i) => {
-
-            const wallet = this.wallets[i];
-
-            console.log(tx);
-
-            tx.out.forEach((out, j) => {
-
-                payments.push({
-                    key: `${i}/${j}`,
-                    name: wallet ? wallet.name : out.addr,
-                    address: out.addr,
-                    inflow: wallet !== undefined,
-                    time: new Date(tx.time * 1000).toDateString(),
-                    coins: out.value / 100000000,
-                    hash: tx.hash,
-                });
-            });
-        });
-
         this.setState({
-            payments: payments
+            payments: toPaymentRows(txs, this.wallets),
         });
     }
 

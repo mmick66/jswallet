@@ -11,11 +11,11 @@ export default {
         AverageBytes: 255
     },
     Endpoints: {
-        BitcoinFees: 'https://bitcoinfees.earn.com/api/v1/fees/recommended'
+        Fees: '/v1/fees/recommended', // relative to the network's apiBase in env.json
+        Prices: 'https://mempool.space/api/v1/prices',
+        PriceChart: 'https://api.blockchain.info/charts/market-price',
     },
     ReturnValues: {
-        TransactionSubmitted: 'Transaction Submitted',
-        NoFreeOutputs: 'No free outputs to spend',
         Fragments: {
             MinimumFeeNotMet: 'min relay fee not met',
         },

@@ -186,14 +186,10 @@ class Wallet extends EventEmitter {
 
     update() {
 
-        return bnet.api.getUnspentOutputs(this.address).then((result) => {
-            this.utxos = result.utxos;
+        return bnet.api.getUnspentOutputs(this.address).then((utxos) => {
+            this.utxos = utxos;
             this.emit(Wallet.Events.Updated);
             return true;
-        }, (e) => {
-            if (e.toString() === Constants.ReturnValues.NoFreeOutputs) {
-                this.emit(Wallet.Events.Updated);
-            }
         });
     }
 

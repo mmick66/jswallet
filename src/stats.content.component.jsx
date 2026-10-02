@@ -3,7 +3,8 @@ import React from 'react';
 import { Menu, Dropdown, Icon } from 'antd';
 
 import { LineChart, Line, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { statistics } from 'blockchain.info';
+
+import net from './logic/network';
 
 class StatsContent extends React.Component {
 
@@ -18,23 +19,23 @@ class StatsContent extends React.Component {
 
     componentDidMount() {
 
-        this.loadPriceData('90d');
+        this.loadPriceData('90days');
 
     }
 
     loadPriceData(timespan) {
 
-        statistics.getChartData('market-price', { timespan: timespan }).then((results) => {
+        net.api.getPriceChart(timespan).then((results) => {
             const mapped = results.map((raw) => {
 
-                const date = new Date(raw.x * 1000);
-                const day = date.getDay() + 1;
+                const date = new Date(raw.time * 1000);
+                const day = date.getDate();
                 const month = date.getMonth() + 1;
                 const year = date.getFullYear().toString().slice(-2);
                 const formatted = day + '/' + month + '/' + year;
                 return {
                     date: formatted,
-                    price: Number((raw.y).toFixed(1)),
+                    price: Number((raw.price).toFixed(1)),
                 };
             });
             this.setState({ data: mapped, });
@@ -43,12 +44,12 @@ class StatsContent extends React.Component {
         });
     }
 
-    onTimespanSelect(key) {
+    onTimespanSelect({ key }) {
         let tspan = '';
         switch (key) {
-        case '1': tspan = '30d'; break;
-        case '2': tspan = '90d'; break;
-        case '3': tspan = '1000d'; break;
+        case '1': tspan = '30days'; break;
+        case '2': tspan = '90days'; break;
+        case '3': tspan = '1year'; break;
         default: break;
         }
         this.loadPriceData(tspan);

@@ -1,57 +1,128 @@
-import { exchange, blockexplorer, pushtx } from 'blockchain.info';
 import bitcoin from 'bitcoinjs-lib';
 import axios from 'axios';
 import Constants from './constants';
+import env from '../env.json';
 
 
-const env = require('../env.json');
-
-const c_exchange = exchange;
-
-let c_blockexplorer;
-let c_pushtx;
 let c_network;
 
 switch (env.network) {
 case Constants.Networks.Testnet:
-    c_blockexplorer = blockexplorer.usingNetwork(3);
-    c_pushtx = pushtx.usingNetwork(3).pushtx;
     c_network = bitcoin.networks.testnet;
     break;
 case Constants.Networks.Bitcoin:
-    c_blockexplorer = blockexplorer;
-    c_pushtx = pushtx.pushtx;
     c_network = bitcoin.networks.bitcoin;
     break;
 default:
     throw new Error('Unknown network in env file');
 }
 
-const getPrice = currency => c_exchange.getTicker({ currency: currency || 'USD' });
+// Esplora REST API (mempool.space) for the configured network
+const c_apiBase = env.apiBase && env.apiBase[env.network];
+if (!c_apiBase) throw new Error(`No apiBase for ${env.network} in env file`);
 
-const getFee = () => {
-    return axios.get(Constants.Endpoints.BitcoinFees).then((response) => {
-        return (response.data.fastestFee * Constants.Transactions.AverageBytes) / Constants.Bitcoin.Satoshis;
-    }).catch(() => {
-        return 0;
-    });
+/**
+ * Keeps the provider's error text (Esplora answers errors with a plain text body,
+ * e.g. the "min relay fee not met" RPC error) in the message the UI reads.
+ */
+const toError = (e) => {
+    const body = e.response && e.response.data;
+    const detail = typeof body === 'string' && body ? `: ${body}` : '';
+    return new Error(`${e.message}${detail}`, { cause: e });
 };
 
-const broadcast = tx => c_pushtx(tx).then(result => result === Constants.ReturnValues.TransactionSubmitted);
+const unwrap = request => request.then(response => response.data, (e) => {
+    throw toError(e);
+});
 
+const get = (url, config) => unwrap(axios.get(url, config));
+
+const post = (url, data, config) => unwrap(axios.post(url, data, config));
+
+// Responses that are plain text must not go through axios' JSON parsing
+const asText = { responseType: 'text' };
+
+
+// Normalized shapes, so that the UI does not depend on the provider
+
+const toUtxo = utxo => ({
+    txid: utxo.txid,
+    vout: utxo.vout,
+    value: utxo.value,
+});
+
+// Coinbase inputs have no prevout; OP_RETURN and bare scripts have no address
+const toEntry = output => ({
+    address: (output && output.scriptpubkey_address) || null,
+    value: output ? output.value : 0,
+});
+
+const toTransaction = tx => ({
+    hash: tx.txid,
+    time: tx.status.confirmed ? tx.status.block_time : null,
+    inputs: tx.vin.map(vin => toEntry(vin.prevout)),
+    outputs: tx.vout.map(toEntry),
+});
+
+// Unconfirmed transactions (no time yet) first, then newest first
+const recency = tx => (tx.time === null ? Number.MAX_SAFE_INTEGER : tx.time);
+const byNewest = (a, b) => recency(b) - recency(a);
+
+
+const getPrice = (currency = 'USD') => get(Constants.Endpoints.Prices).then((prices) => {
+    const price = prices[currency];
+    if (typeof price !== 'number') throw new Error(`No ${currency} price available`);
+    return price;
+});
+
+/**
+ * @param timespan One of '30days', '90days' or '1year'
+ * @returns {Promise<Array<{time: number, price: number}>>} Daily USD prices, time in seconds
+ */
+const getPriceChart = timespan => get(Constants.Endpoints.PriceChart, {
+    // cors=true makes blockchain.info send the CORS headers a browser renderer needs
+    params: { timespan: timespan, format: 'json', cors: true },
+}).then(chart => chart.values.map(point => ({ time: point.x, price: point.y })));
+
+/**
+ * The fee in bitcoins for an average transaction at the fastest rate (sat/vB)
+ */
+const getFee = () => get(`${c_apiBase}${Constants.Endpoints.Fees}`).then((fees) => {
+    return (fees.fastestFee * Constants.Transactions.AverageBytes) / Constants.Bitcoin.Satoshis;
+});
+
+/**
+ * @param tx The signed transaction as hex
+ * @returns {Promise<string>} The txid; rejects with the node's error text
+ */
+const broadcast = tx => post(`${c_apiBase}/tx`, tx, {
+    headers: { 'Content-Type': 'text/plain' },
+    ...asText,
+});
+
+const getTxHex = txid => get(`${c_apiBase}/tx/${txid}/hex`, asText);
+
+/**
+ * @returns {Promise<Array<{txid: string, vout: number, value: number}>>} Values in satoshis
+ */
 const getUnspentOutputs = (address) => {
-    return c_blockexplorer.getUnspentOutputs(address).then((result) => {
-        return {
-            utxos: result.unspent_outputs,
-            coins: result.unspent_outputs.reduce((a, c) => a + c.value, 0) / Constants.Bitcoin.Satoshis
-        };
-    });
+    return get(`${c_apiBase}/address/${address}/utxo`).then(utxos => utxos.map(toUtxo));
 };
 
-
+/**
+ * The latest transactions of each address (Esplora's first page: up to 50 unconfirmed and
+ * 25 confirmed), merged without duplicates.
+ * @returns {Promise<Array<{hash, time, inputs: Array<{address, value}>, outputs: Array<{address, value}>}>>}
+ */
 const getTransactions = (addresses) => {
-    return c_blockexplorer.getMultiAddress(addresses, {}).then((result) => {
-        return Array.isArray(result.txs) ? result.txs : [];
+    return Promise.all(addresses.map(address => get(`${c_apiBase}/address/${address}/txs`))).then((pages) => {
+        const byHash = new Map();
+        pages.forEach((txs) => {
+            txs.forEach((tx) => {
+                if (!byHash.has(tx.txid)) byHash.set(tx.txid, toTransaction(tx));
+            });
+        });
+        return [...byHash.values()].sort(byNewest);
     });
 };
 
@@ -62,8 +133,10 @@ export default {
     name: env.network,
     api: {
         getPrice: getPrice,
+        getPriceChart: getPriceChart,
         getFee: getFee,
         broadcast: broadcast,
+        getTxHex: getTxHex,
         getUnspentOutputs: getUnspentOutputs,
         getTransactions: getTransactions,
     }

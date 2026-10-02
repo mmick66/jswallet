@@ -27,6 +27,12 @@ const validateFormHashed = (form) => {
     });
 };
 
+const updateWallet = (wallet) => {
+    return wallet.update().catch((e) => {
+        console.log(`Could not update wallet ${wallet.name}`, e);
+    });
+};
+
 const formatAmount = (amount) => {
     const nf = new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -61,8 +67,8 @@ class WalletsContent extends React.Component {
 
     componentDidMount() {
 
-        bnet.api.getPrice('USD').then((r) => {
-            this.setState({ price: r.sell });
+        bnet.api.getPrice('USD').then((price) => {
+            this.setState({ price: price });
         }).catch((e) => {
             console.log(e);
         });
@@ -72,6 +78,8 @@ class WalletsContent extends React.Component {
             this.fee = fee;
         }).catch((e) => {
             console.log('Could not get fee ', e);
+            // Wallet.send needs a number; a zero fee makes the node reject the transaction
+            this.fee = 0;
         });
 
 
@@ -82,7 +90,7 @@ class WalletsContent extends React.Component {
                     const newTotal = this.state.wallets.reduce((a, c) => a + c.coins, 0);
                     this.setState({ total: newTotal });
                 });
-                w.update();
+                updateWallet(w);
             });
 
             this.setState({ wallets: wallets });
@@ -178,7 +186,7 @@ class WalletsContent extends React.Component {
     }
 
     handleReload() {
-        this.state.wallets.forEach(w => w.update());
+        this.state.wallets.forEach(updateWallet);
     }
 
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { List } from 'antd';
 
+const describe = entry => `${entry.address || '(no address)'} ${entry.value}`;
+
 class TransactionDisplay extends React.Component {
 
     constructor(props) {
@@ -13,8 +15,8 @@ class TransactionDisplay extends React.Component {
         if (transaction) {
             this.state = {
                 hash: transaction.hash,
-                inputs: transaction.inputs.filter(i => i.prev_out).map(po => `${po.addr} ${po.value}`),
-                outputs: transaction.out.map(o => `${o.addr} ${o.value}`),
+                inputs: transaction.inputs.map(describe),
+                outputs: transaction.outputs.map(describe),
             };
         } else {
             this.state = {
