@@ -10,7 +10,8 @@ import Database from '../src/main/database';
 import Hasher from '../src/main/hasher.util';
 import network from '../src/main/network';
 import Wallet from '../src/main/wallet.class';
-import { createIpcHandlers, registerIpcHandlers } from '../src/main/ipc';
+import { ArgumentSchemas, createIpcHandlers, registerIpcHandlers } from '../src/main/ipc';
+import { createIpcHandle } from '../src/main/security/ipc';
 
 // Testnet WIF of private key 1 and its address
 const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';
@@ -22,6 +23,10 @@ const TYPED = 'hunter2';
 const PASSWORD = '2fce64ac1708c5916a6958f9f25419c408580ed2bdf8a336805fcdd1db7f7346e6a9156eaecf1b2ee58d142939bc9762';
 // WIF as crypto.createCipher('aes-256-cbc', PASSWORD) stored it; see cipher.test.js
 const LEGACY_WIF = '87d47afa0b1f75d574b022f58593dda7b4d109ebee898597716d14df253650e5c86877c5767832c203d7d38dc2136c809b29c4f6d7d6ccfbb3ec32f6bef04039';
+
+// The main window's top frame, the only sender that IPC answers (see ipc-guard.test.js)
+const ORIGIN = 'app://jswallet';
+const MAIN_FRAME = { origin: ORIGIN, url: `${ORIGIN}/index.html` };
 
 const LEGACY_RECORD = {
     name: 'Savings',
@@ -53,8 +58,10 @@ describe('IPC handlers', () => {
     let dir;
     let writeClipboard;
     let handlers;
+    let listeners;
 
-    const call = (channel, arg) => handlers[channel](arg);
+    // As the main window calls it: through the sender checks and the channel's schema
+    const call = (channel, ...args) => listeners.get(channel)({ senderFrame: MAIN_FRAME }, ...args);
     // Read back from the file, once the app's store has loaded it (nedb hangs on a file that two stores load at once)
     const stored = () => Wallet.store.find({}).then(() => new Database('wallets', dir).find({}));
 
@@ -63,6 +70,9 @@ describe('IPC handlers', () => {
         Wallet.open(dir);
         writeClipboard = vi.fn().mockResolvedValue(undefined);
         handlers = createIpcHandlers({ writeClipboard });
+        listeners = new Map();
+        const ipcMain = { handle: (channel, listener) => listeners.set(channel, listener) };
+        registerIpcHandlers(createIpcHandle({ ipcMain, getMainFrame: () => MAIN_FRAME, origin: ORIGIN }), handlers);
     });
 
     afterEach(async () => {
@@ -72,20 +82,33 @@ describe('IPC handlers', () => {
         fs.rmSync(dir, { recursive: true, force: true });
     });
 
-    it('answers every channel', () => {
+    it('answers every channel, and has a schema for each', () => {
         expect(Object.keys(handlers).sort()).toEqual(Object.values(Channels).sort());
+        expect(Object.keys(ArgumentSchemas).sort()).toEqual(Object.values(Channels).sort());
+        expect([...listeners.keys()].sort()).toEqual(Object.values(Channels).sort());
     });
 
-    it('registers each handler with ipcMain and passes it only the argument', async () => {
-        const ipcMain = { handle: vi.fn() };
-        const ping = vi.fn().mockResolvedValue('pong');
+    it('registers each handler through handle, with the schema of its channel', () => {
+        const handle = vi.fn();
 
-        registerIpcHandlers(ipcMain, { 'test:ping': ping });
+        registerIpcHandlers(handle, handlers);
 
-        expect(ipcMain.handle).toHaveBeenCalledWith('test:ping', expect.any(Function));
-        const [[, listener]] = ipcMain.handle.mock.calls;
-        expect(await listener({ sender: {} }, 'arg', 'extra')).toBe('pong');
-        expect(ping).toHaveBeenCalledWith('arg');
+        expect(handle).toHaveBeenCalledTimes(Object.keys(Channels).length);
+        Object.values(Channels).forEach((channel) => {
+            expect(handle).toHaveBeenCalledWith(channel, ArgumentSchemas[channel], handlers[channel]);
+        });
+    });
+
+    it.each([
+        ['listWallets', Channels.ListWallets, ['extra']],
+        ['getFee', Channels.GetFee, [{}]],
+        ['refreshWallet', Channels.RefreshWallet, [ADDRESS, 'extra']],
+    ])('rejects %s with arguments it does not take', async (name, channel, args) => {
+        const getFee = vi.spyOn(network.api, 'getFee');
+        const getUnspentOutputs = vi.spyOn(network.api, 'getUnspentOutputs');
+        await expect(call(channel, ...args)).rejects.toThrow(TypeError);
+        expect(getFee).not.toHaveBeenCalled();
+        expect(getUnspentOutputs).not.toHaveBeenCalled();
     });
 
     describe('createWallet', () => {

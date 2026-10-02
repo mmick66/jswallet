@@ -8,6 +8,31 @@ import * as check from './ipc.arguments';
 const Timespans = ['30days', '90days', '1year'];
 
 /**
+ * The argument of each channel in Channels, which src/main/security/ipc.js checks before the handler
+ * runs. The handlers below trust what these return.
+ */
+export const ArgumentSchemas = {
+    [Channels.ListWallets]: check.none,
+    [Channels.CreateWallet]: check.object({
+        name: check.text(check.Limits.Name),
+        password: check.text(check.Limits.Password),
+    }),
+    [Channels.DeleteWallet]: check.address,
+    [Channels.RefreshWallet]: check.address,
+    [Channels.SendPayment]: check.object({
+        from: check.address,
+        to: check.address,
+        btc: check.bitcoins,
+        password: check.text(check.Limits.Password),
+    }),
+    [Channels.GetPrice]: check.none,
+    [Channels.GetFee]: check.none,
+    [Channels.GetTransactions]: check.addresses,
+    [Channels.GetPriceChart]: check.oneOf(Timespans),
+    [Channels.WriteClipboard]: check.text(check.Limits.Text),
+};
+
+/**
  * A wallet's balance: its coins, and the values in satoshis of the unspent outputs, in the order
  * Wallet.send spends them, so that the send form can show the fee (see planSpend)
  */
@@ -59,8 +84,9 @@ class Wallets {
 }
 
 /**
- * The handler of each channel in Channels. A handler takes the one argument that the renderer sent
- * and returns a promise of plain data. Passwords are hashed here (Hasher.hash), and no key leaves.
+ * The handler of each channel in Channels. A handler takes the one argument that the renderer sent,
+ * as its schema in ArgumentSchemas returned it, and returns a promise of plain data. Passwords are
+ * hashed here (Hasher.hash), and no key leaves.
  * @param writeClipboard Writes text to the clipboard of the system, for when the renderer cannot
  */
 export const createIpcHandlers = ({ writeClipboard }) => {
@@ -73,11 +99,7 @@ export const createIpcHandlers = ({ writeClipboard }) => {
         /**
          * @returns {Promise<{wallet, mnemonic: string}>} The mnemonic is not stored: this is the only time it is shown
          */
-        [Channels.CreateWallet]: async (args) => {
-            check.object(args, 'arguments');
-            const name = check.text(args.name, 'name', check.Limits.Name);
-            const password = check.text(args.password, 'password', check.Limits.Password);
-
+        [Channels.CreateWallet]: async ({ name, password }) => {
             const mnemonic = Wallet.generate();
             const wallet = Wallet.create(name, mnemonic).encrypt(await Hasher.hash(password));
             await wallet.save();
@@ -87,13 +109,13 @@ export const createIpcHandlers = ({ writeClipboard }) => {
         },
 
         [Channels.DeleteWallet]: async (address) => {
-            const wallet = await wallets.get(check.address(address, 'address'));
+            const wallet = await wallets.get(address);
             await wallet.erase();
             wallets.remove(wallet.address);
         },
 
         [Channels.RefreshWallet]: async (address) => {
-            const wallet = await wallets.get(check.address(address, 'address'));
+            const wallet = await wallets.get(address);
             await wallet.update();
             return toBalance(wallet);
         },
@@ -102,13 +124,9 @@ export const createIpcHandlers = ({ writeClipboard }) => {
          * Rejects with a message that contains Constants.ReturnValues.Fragments.WrongPassword
          * if the password is not the wallet's
          */
-        [Channels.SendPayment]: async (args) => {
-            check.object(args, 'arguments');
-            const from = check.address(args.from, 'from');
-            const to = check.address(args.to, 'to');
-            const btc = check.bitcoins(args.btc, 'btc');
-            const password = check.text(args.password, 'password', check.Limits.Password);
-
+        [Channels.SendPayment]: async ({
+            from, to, btc, password
+        }) => {
             const wallet = await wallets.get(from);
             const hash = await Hasher.hash(password);
             if (!wallet.matches(hash)) throw new Error(Constants.ReturnValues.Fragments.WrongPassword);
@@ -124,23 +142,24 @@ export const createIpcHandlers = ({ writeClipboard }) => {
 
         [Channels.GetFee]: async () => bnet.api.getFee(),
 
-        [Channels.GetTransactions]: async (addresses) => bnet.api.getTransactions(check.addresses(addresses, 'addresses')),
+        [Channels.GetTransactions]: async (addresses) => bnet.api.getTransactions(addresses),
 
-        [Channels.GetPriceChart]: async (timespan) => bnet.api.getPriceChart(check.oneOf(timespan, 'timespan', Timespans)),
+        [Channels.GetPriceChart]: async (timespan) => bnet.api.getPriceChart(timespan),
 
         [Channels.WriteClipboard]: async (text) => {
-            await writeClipboard(check.text(text, 'text', check.Limits.Text));
+            await writeClipboard(text);
         },
     };
 };
 
 /**
- * Answers each channel with its handler. The handler gets the renderer's argument, not the event.
- * @param ipcMain From electron
+ * Answers each channel with its handler, behind the sender checks of handle and the channel's schema.
+ * The handler gets the renderer's argument, not the event.
+ * @param handle From createIpcHandle (src/main/security/ipc.js)
  * @param handlers From createIpcHandlers
  */
-export const registerIpcHandlers = (ipcMain, handlers) => {
+export const registerIpcHandlers = (handle, handlers) => {
     Object.entries(handlers).forEach(([channel, handler]) => {
-        ipcMain.handle(channel, (event, arg) => handler(arg));
+        handle(channel, ArgumentSchemas[channel], handler);
     });
 };

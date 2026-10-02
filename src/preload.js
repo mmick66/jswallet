@@ -14,6 +14,12 @@ const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args).catch(
 // The renderer's only way to the main process. Each function invokes one fixed channel, which
 // src/main/ipc.js answers, and returns its promise. The preload runs sandboxed, so it imports
 // nothing but electron and modules that Vite bundles into it.
+// Whatever runs in the page can call these, so expose only named functions for one purpose each:
+// never ipcRenderer, its on or send, an IPC event, or an invoke(channel, ...args) that takes the
+// channel from the page. A subscription, if one is ever needed, hands the page the value only:
+//     (cb) => { const l = (_e, v) => cb(v); ipcRenderer.on(ch, l); return () => ipcRenderer.removeListener(ch, l); }
+// Main checks the sender and the argument of every call anyway (src/main/security/ipc.js).
+// src/jswallet.js lists these functions; keep the two in step.
 contextBridge.exposeInMainWorld('jswallet', {
     // [{ name, address, network, coins, utxoValues }]
     listWallets: () => invoke(Channels.ListWallets),

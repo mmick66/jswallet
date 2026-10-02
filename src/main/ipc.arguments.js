@@ -2,8 +2,10 @@ import { isValidAddress } from '../common/address';
 import chain from '../common/chain';
 
 /**
- * Checks for what the renderer sends over IPC. Each returns the value it was given, or throws a
- * TypeError that names the argument but never repeats its value, as passwords go through here too.
+ * Schemas for what the renderer sends over IPC, one per channel in src/main/ipc.js, which
+ * src/main/security/ipc.js applies before a handler runs. A schema is a function (value, what) that
+ * returns the value, or a copy of it with only the fields it knows, or throws a TypeError that names
+ * the argument but never repeats its value, as passwords go through here too.
  */
 
 export const Limits = {
@@ -17,12 +19,28 @@ export const Limits = {
 
 const invalid = (what, why) => new TypeError(`Invalid ${what}: ${why}`);
 
-export const object = (value, what) => {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) throw invalid(what, 'expected an object');
+/**
+ * No argument at all, for the channels that take none
+ */
+export const none = (value, what) => {
+    if (value !== undefined) throw invalid(what, 'expected none');
     return value;
 };
 
-export const text = (value, what, max) => {
+/**
+ * An object with the given fields, each checked by its schema and named by its key. The result has
+ * only these fields: the handler never sees any other that the renderer sent.
+ * @param fields { key: schema }
+ */
+export const object = (fields) => (value, what) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) throw invalid(what, 'expected an object');
+    return Object.fromEntries(Object.entries(fields).map(([key, schema]) => [key, schema(value[key], key)]));
+};
+
+/**
+ * A string of 1 to max characters
+ */
+export const text = (max) => (value, what) => {
     if (typeof value !== 'string') throw invalid(what, 'expected a string');
     if (value.length === 0 || value.length > max) throw invalid(what, `expected 1 to ${max} characters`);
     return value;
@@ -32,7 +50,7 @@ export const text = (value, what, max) => {
  * An address on the configured network, see isValidAddress
  */
 export const address = (value, what) => {
-    text(value, what, Limits.Address);
+    text(Limits.Address)(value, what);
     if (!isValidAddress(value)) throw invalid(what, `not a ${chain.name} address`);
     return value;
 };
@@ -54,7 +72,7 @@ export const bitcoins = (value, what) => {
     throw invalid(what, 'expected an amount in bitcoins');
 };
 
-export const oneOf = (value, what, allowed) => {
+export const oneOf = (allowed) => (value, what) => {
     if (!allowed.includes(value)) throw invalid(what, `expected one of ${allowed.join(', ')}`);
     return value;
 };

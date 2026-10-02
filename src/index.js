@@ -7,10 +7,13 @@ import started from 'electron-squirrel-startup';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import Wallet from './main/wallet.class';
 import { createIpcHandlers, registerIpcHandlers } from './main/ipc';
+import { createIpcHandle } from './main/security/ipc';
 import { registerNavigationGuards } from './main/security/navigation';
 import { databaseDirectory, migrateLegacyDatabase } from './main/storage';
 import mainWindowOptions from './main/security/window-options';
-import { APP_INDEX_URL, handleAppProtocol, registerAppScheme } from './main/security/app-protocol';
+import {
+    APP_INDEX_URL, APP_ORIGIN, handleAppProtocol, registerAppScheme
+} from './main/security/app-protocol';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -31,6 +34,12 @@ registerNavigationGuards(app);
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+
+// The origin of the page in the main window, the only one that IPC answers
+const rendererOrigin = MAIN_WINDOW_VITE_DEV_SERVER_URL ? new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL).origin : APP_ORIGIN;
+
+// The only frame that IPC answers (src/main/security/ipc.js)
+const mainFrame = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents.mainFrame : null);
 
 // DevTools are a development aid only: a failure to install them must not block startup.
 const installDevTools = async () => {
@@ -77,7 +86,8 @@ app.whenReady().then(async () => {
     // app://jswallet serves the renderer's build directory, and nothing else
     handleAppProtocol(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}`));
 
-    registerIpcHandlers(ipcMain, createIpcHandlers({
+    const handle = createIpcHandle({ ipcMain, getMainFrame: mainFrame, origin: rendererOrigin });
+    registerIpcHandlers(handle, createIpcHandlers({
         writeClipboard: (text) => clipboard.writeText(text),
     }));
 
