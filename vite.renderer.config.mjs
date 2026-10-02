@@ -1,26 +1,26 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { META_POLICY } from './src/main/security/content-security-policy.mjs';
 
-const PRODUCTION_SCRIPT_SRC = "script-src 'self'";
-
-// The Fast Refresh preamble that @vitejs/plugin-react injects into index.html is an
-// inline script, so the dev server alone relaxes the production script-src policy.
-export function devContentSecurityPolicy() {
+// main sends the renderer's Content-Security-Policy as a header, the dev server's relaxed one included,
+// so index.html needs no policy of its own. The build carries the production policy in a meta tag
+// as well, as a fallback should the page ever load without the header.
+export function contentSecurityPolicyMeta() {
     return {
-        name: 'jswallet:dev-content-security-policy',
-        apply: 'serve',
-        transformIndexHtml(html) {
-            if (!html.includes(PRODUCTION_SCRIPT_SRC)) {
-                throw new Error(`index.html must declare the Content-Security-Policy "${PRODUCTION_SCRIPT_SRC}"`);
-            }
-            return html.replace(PRODUCTION_SCRIPT_SRC, `${PRODUCTION_SCRIPT_SRC} 'unsafe-inline'`);
-        },
+        name: 'jswallet:content-security-policy-meta',
+        apply: 'build',
+        transformIndexHtml: () => [{
+            tag: 'meta',
+            attrs: { 'http-equiv': 'Content-Security-Policy', content: META_POLICY },
+            // A policy applies only to what comes after it, so it goes first, before Vite's scripts
+            injectTo: 'head-prepend',
+        }],
     };
 }
 
 // https://vitejs.dev/config
 export default defineConfig({
-    plugins: [react(), devContentSecurityPolicy()],
+    plugins: [react(), contentSecurityPolicyMeta()],
     define: {
         // draft-js, which antd 3 bundles for its Mention component, reads Node's `global`.
         global: 'globalThis',

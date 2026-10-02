@@ -42,6 +42,7 @@ const electron = vi.hoisted(() => {
                 setPermissionRequestHandler: vi.fn(),
                 setPermissionCheckHandler: vi.fn(),
                 setDevicePermissionHandler: vi.fn(),
+                webRequest: { onHeadersReceived: vi.fn() },
             },
         },
     };

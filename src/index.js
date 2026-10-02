@@ -15,6 +15,7 @@ import {
     APP_INDEX_URL, APP_ORIGIN, handleAppProtocol, registerAppScheme
 } from './main/security/app-protocol';
 import { registerPermissionHandlers } from './main/security/permissions';
+import { contentSecurityPolicy, enforceContentSecurityPolicy } from './main/security/content-security-policy';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -35,6 +36,9 @@ registerNavigationGuards(app);
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+
+// The page of the main window: the Vite dev server's in dev, app://jswallet/index.html once packaged
+const rendererUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL || APP_INDEX_URL;
 
 // The origin of the page in the main window, the only one that IPC answers
 const rendererOrigin = MAIN_WINDOW_VITE_DEV_SERVER_URL ? new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL).origin : APP_ORIGIN;
@@ -58,11 +62,7 @@ const createWindow = () => {
     mainWindow = new BrowserWindow(mainWindowOptions({ preload: path.join(__dirname, 'preload.cjs') }));
 
     // and load the index.html of the app.
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    } else {
-        mainWindow.loadURL(APP_INDEX_URL);
-    }
+    mainWindow.loadURL(rendererUrl);
 
     // Open the DevTools.
     // mainWindow.webContents.openDevTools();
@@ -89,6 +89,13 @@ app.whenReady().then(async () => {
 
     // No camera, location, notifications, devices and so on: only clipboard writes from the renderer
     registerPermissionHandlers(session.defaultSession, { rendererOrigin, logDenied: !app.isPackaged });
+
+    // The renderer's pages come with a strict Content-Security-Policy, relaxed for the dev server's
+    // inline scripts and websocket when the app is not packaged (src/main/security/content-security-policy.mjs)
+    enforceContentSecurityPolicy(session.defaultSession, {
+        origin: rendererOrigin,
+        policy: contentSecurityPolicy({ packaged: app.isPackaged }),
+    });
 
     const handle = createIpcHandle({ ipcMain, getMainFrame: mainFrame, origin: rendererOrigin });
     registerIpcHandlers(handle, createIpcHandlers({

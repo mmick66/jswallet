@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { net, protocol } from 'electron';
+import { PRODUCTION_POLICY } from './content-security-policy';
 
 /**
  * The packaged renderer is served from app://jswallet, not file://. A page on file:// can read any
@@ -58,15 +59,26 @@ export const resolveAppPath = (rendererRoot, pathname, paths = path) => {
 const isFile = (file) => fs.promises.stat(file).then((stats) => stats.isFile(), () => false);
 
 /**
+ * response with the production Content-Security-Policy. enforceContentSecurityPolicy sends it too, but
+ * a session has a single onHeadersReceived listener, so app: does not count on it.
+ */
+const withPolicy = (response) => {
+    const headers = new Headers(response.headers);
+    headers.set('Content-Security-Policy', PRODUCTION_POLICY);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+};
+
+/**
  * The handler of app: requests: the file that resolveAppPath finds for app://jswallet/<path>, or
  * 404 for another host, a path outside rendererRoot, or a path that is not a file (no directory listings).
+ * Every response carries the production Content-Security-Policy (src/main/security/content-security-policy.mjs).
  * @param rendererRoot The absolute path of the renderer's build directory
  */
 export const appProtocolHandler = (rendererRoot) => async (request) => {
     const { host, pathname } = new URL(request.url);
     const file = host === APP_HOST ? resolveAppPath(rendererRoot, pathname) : null;
-    if (file === null || !(await isFile(file))) return new Response(null, { status: 404 });
-    return net.fetch(pathToFileURL(file).toString());
+    if (file === null || !(await isFile(file))) return withPolicy(new Response(null, { status: 404 }));
+    return withPolicy(await net.fetch(pathToFileURL(file).toString()));
 };
 
 /**

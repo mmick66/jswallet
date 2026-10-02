@@ -1,10 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { FuseV1Options } from '@electron/fuses';
 import forgeConfig from '../forge.config.mjs';
-import { devContentSecurityPolicy } from '../vite.renderer.config.mjs';
 
-const indexHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const pluginNamed = name => forgeConfig.plugins.find(plugin => plugin.name === name);
 
 describe('forge config', () => {
@@ -38,23 +35,5 @@ describe('forge config', () => {
         expect(fusesConfig[FuseV1Options.RunAsNode]).toBe(false);
         expect(fusesConfig[FuseV1Options.OnlyLoadAppFromAsar]).toBe(true);
         expect(fusesConfig[FuseV1Options.EnableEmbeddedAsarIntegrityValidation]).toBe(true);
-    });
-});
-
-describe('renderer content security policy', () => {
-    it('allows only same-origin scripts in production', () => {
-        const csp = indexHtml.match(/http-equiv="Content-Security-Policy" content="([^"]*)"/)[1];
-        expect(csp).toBe("script-src 'self'");
-        expect(indexHtml).toContain('<script type="module" src="/src/renderer.jsx"></script>');
-    });
-
-    it('allows the inline Fast Refresh preamble on the dev server only', () => {
-        const plugin = devContentSecurityPolicy();
-        expect(plugin.apply).toBe('serve');
-        expect(plugin.transformIndexHtml(indexHtml)).toContain(`content="script-src 'self' 'unsafe-inline'"`);
-    });
-
-    it('fails the dev server when index.html loses its policy', () => {
-        expect(() => devContentSecurityPolicy().transformIndexHtml('<head></head>')).toThrow(/Content-Security-Policy/);
     });
 });
