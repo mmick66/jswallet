@@ -20,6 +20,22 @@ npm start
 
 `npm start` runs the app from source, with the renderer served by Vite's dev server.
 
+### Downloads
+
+Installers for Windows, macOS (Apple silicon and Intel) and Linux are on the
+[Releases](https://github.com/mmick66/jswallet/releases) page. They are **not code-signed** yet, so
+the system warns before opening them the first time:
+
+- **macOS**: unzip and open the app. When macOS says Apple could not verify it, go to
+  *System Settings › Privacy & Security* and choose **Open Anyway** (on macOS 14 and older,
+  right-click the app and choose **Open**).
+- **Windows**: when SmartScreen says *Windows protected your PC*, choose **More info › Run anyway**.
+- **Linux**: `sudo apt install ./jswallet_<version>_amd64.deb`, or
+  `sudo dnf install ./jswallet-<version>-1.x86_64.rpm`.
+
+Each release lists the files' SHA-256 checksums in `SHA256SUMS.txt`. Check a download with
+`shasum -a 256 -c SHA256SUMS.txt --ignore-missing` (or `sha256sum -c` on Linux).
+
 ## Network
 
 The wallet runs on Bitcoin's [testnet4](https://mempool.space/testnet4), where coins have no value.
@@ -66,6 +82,21 @@ builds the app and its installers for the platform you run it on, into `out/make
 a zip on macOS, a Squirrel installer on Windows, and deb and rpm packages on Linux
 (these need `dpkg` and `fakeroot`, and `rpmbuild`).
 `npm run package` builds the app alone, into `out`.
+
+### Releasing
+
+1. Set the version: `npm version <x.y.z> --no-git-tag-version`.
+2. Write the release notes in `docs/releases/<x.y.z>.md`.
+3. Commit both, push, then tag the commit `<x.y.z>` and push the tag.
+
+The [Release workflow](.github/workflows/release.yml) then checks the code, builds every installer
+on its own platform, and publishes the GitHub release with the notes and `SHA256SUMS.txt`.
+Without a notes file, it creates a draft with generated notes instead.
+
+The workflow signs the installers once the signing credentials are in the repository's Actions
+secrets and variables (listed at the top of the workflow): a Developer ID and App Store Connect API
+key for macOS, and a SignPath project for Windows. Until then the macOS app is signed ad hoc and the
+Windows installer is unsigned.
 
 ## Wallet storage
 
