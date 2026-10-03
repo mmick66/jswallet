@@ -1,7 +1,7 @@
 {
   "name": "jswallet",
   "productName": "jswallet",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "A sample Bitcoin wallet",
   "main": ".vite/build/index.cjs",
