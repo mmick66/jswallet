@@ -9,6 +9,15 @@ updates:
     # pulled from npm before it reaches a PR. Security updates skip this.
     cooldown:
       default-days: 3
+    # ESLint 10 waits for eslint-plugin-react, eslint-plugin-jsx-a11y and
+    # eslint-config-airbnb-extended to accept it as a peer; until then npm ci
+    # fails with ERESOLVE (PR #9). Minor and patch updates still come.
+    # Remove these entries with jswallet-2cb.11.
+    ignore:
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
     # A package goes to the first group whose patterns match it.
     groups:
       # Electron alone, so each major arrives as its own PR. Migrate one major
