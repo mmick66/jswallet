@@ -61,13 +61,17 @@ function CreateTransactionForm({
         return `Network fee: Ƀ ${bitcoins} for ${inputs} ${inputs === 1 ? 'input' : 'inputs'} ${atRate}`;
     };
 
-    // An empty amount is left to the required rule. The dollars field checks the bitcoins it puts in
-    // the bitcoin field, which is the amount sent. Both check again when the address changes, as the
-    // receiver's output adds to the fee and sets the dust limit.
-    const checkAmount = (toAmount) => (rule, value) => {
+    // An empty amount is left to the required rule. Both fields check the amount sent, which the bitcoin
+    // field holds: the dollars field puts the bitcoins it buys there, but shows an amount entered in
+    // bitcoins only to the cent, and the bitcoins those cents buy can be more than the funds cover when
+    // the amount sent is not. While the bitcoin field holds no number, it shows why. Both check again when
+    // the address changes, as the receiver's output adds to the fee and sets the dust limit.
+    const checkAmount = (rule, value) => {
         if (!value) return Promise.resolve();
         if (!isValidNumber(value)) return Promise.reject(new Error('The value is not numeric'));
-        const error = sendError(toAmount(parseFloat(value)), form.getFieldValue('address'));
+        const btc = form.getFieldValue('bitcoin');
+        if (!isValidNumber(btc)) return Promise.resolve();
+        const error = sendError(btc, form.getFieldValue('address'));
         return error ? Promise.reject(new Error(error)) : Promise.resolve();
     };
 
@@ -95,14 +99,14 @@ function CreateTransactionForm({
 
             <Form.Item name="dollars"
                        dependencies={['address']}
-                       rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount(toBitcoins) }]}>
+                       rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount }]}>
                 <Input placeholder="Amount in Dollars" prefix="$" />
             </Form.Item>
 
             <Form.Item name="bitcoin"
                        extra={describeFee()}
                        dependencies={['address']}
-                       rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount((btc) => btc) }]}>
+                       rules={[{ required: true, message: 'Please input an amount!' }, { validator: checkAmount }]}>
                 <Input placeholder="Amount in Bitcoin" prefix="Ƀ" />
             </Form.Item>
 
