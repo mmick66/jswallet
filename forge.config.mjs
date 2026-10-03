@@ -5,12 +5,61 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { execFile } from 'node:child_process';
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
+import { promisify } from 'node:util';
+
+const run = promisify(execFile);
+
+/**
+ * macOS signing, from the environment (the release workflow sets these from its secrets; see jswallet-kvl).
+ * APPLE_SIGNING_IDENTITY is a Developer ID Application identity in the keychain, such as
+ * "Developer ID Application: Jane Doe (TEAMID)". With it the packager signs the app with the hardened
+ * runtime (@electron/osx-sign's default entitlements for Electron). With an App Store Connect API key
+ * as well (APPLE_API_KEY: path to the .p8 file, APPLE_API_KEY_ID, APPLE_API_ISSUER) it notarizes the app.
+ */
+export const macSigning = (env = process.env) => {
+    if (!env.APPLE_SIGNING_IDENTITY) return {};
+    const signing = { osxSign: { identity: env.APPLE_SIGNING_IDENTITY } };
+    if (env.APPLE_API_KEY && env.APPLE_API_KEY_ID && env.APPLE_API_ISSUER) {
+        signing.osxNotarize = {
+            appleApiKey: env.APPLE_API_KEY,
+            appleApiKeyId: env.APPLE_API_KEY_ID,
+            appleApiIssuer: env.APPLE_API_ISSUER,
+        };
+    }
+    return signing;
+};
+
+/**
+ * Without a Developer ID, the app keeps an ad-hoc signature, which has to be renewed after packaging:
+ * the fuses plugin signs ad hoc as it flips the fuses, and the packager writes Info.plist (with the ASAR
+ * integrity digest) after that, which breaks the signature. macOS calls a downloaded app with a broken
+ * signature damaged, and offers no way to open it; an intact ad-hoc signature gets "Open Anyway".
+ */
+export const resignAdHoc = async (outputPaths, exec = run) => {
+    for (const dir of outputPaths) {
+        const apps = (await readdir(dir)).filter((name) => name.endsWith('.app'));
+        for (const app of apps) {
+            const bundle = path.join(dir, app);
+            await exec('codesign', ['--force', '--deep', '--sign', '-', bundle]);
+            await exec('codesign', ['--verify', '--deep', '--strict', bundle]);
+        }
+    }
+};
 
 const config = {
     packagerConfig: {
         asar: true,
+        ...macSigning(),
     },
     rebuildConfig: {},
+    hooks: {
+        postPackage: async (forgeConfig, { platform, outputPaths }) => {
+            if (platform === 'darwin' && !forgeConfig.packagerConfig.osxSign) await resignAdHoc(outputPaths);
+        },
+    },
     makers: [
         new MakerSquirrel({ name: 'jswallet' }, ['win32']),
         new MakerZIP({}, ['darwin']),
