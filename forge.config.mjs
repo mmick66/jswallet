@@ -64,7 +64,10 @@ const config = {
         new MakerSquirrel({ name: 'jswallet' }, ['win32']),
         new MakerZIP({}, ['darwin']),
         new MakerDeb({}, ['linux']),
-        new MakerRpm({}, ['linux']),
+        // electron-installer-redhat's spec template copies usr/* from the build directory, which
+        // rpm 4.20 and later moved to BUILD/<name>-<version>-build; this copy of the template takes
+        // the staged usr/ from %{_topdir}/BUILD on every rpm version (jsw-8f7, upstream PRs #344, #347).
+        new MakerRpm({ options: { specTemplate: path.resolve(import.meta.dirname, 'packaging/rpm.spec.ejs') } }, ['linux']),
     ],
     plugins: [
         new VitePlugin({
