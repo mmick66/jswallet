@@ -1,0 +1,75 @@
+You are responsible for exactly one Beads ticket: TICKET_ID. Do not work on any other ticket.
+
+- You are in your own git worktree on branch wt/TICKET_ID. Commit there. Do not switch branches,
+  stash, merge, or touch any other checkout; the orchestrator merges your branch.
+- Claim it with `bd update TICKET_ID --claim`, then read it with `bd show TICKET_ID`.
+- Check your work with `npm run check`. It runs ESLint on src (errors fail it, warnings don't) and
+  every Vitest suite. It doesn't build the app: after changing the main process, the preload or the
+  build config, also run `npm run package`.
+  While iterating, run only the checks you need, e.g. `npx vitest run test/<name>.test.js` or
+  `npx eslint <file>`.
+- Run `npm run check` in the foreground, never in the background: while you wait on a background
+  command you look idle, and the orchestrator stops the run to ask whether you need an answer.
+- Other workers run the same programs and tests on this machine. Never stop processes by name or
+  pattern (`pkill`, `killall`, `pkill -f`); stop only those you started, by their PID.
+- Other tickets run beside yours and merge first, so don't add where they all add:
+  - put new tests in a new test file named after the feature, not at the end of an existing one;
+  - add new struct fields, constants and helpers next to the code they belong to, not at the end
+    of a list;
+  - add a changelog entry as new lines, without rewording or moving the others: with
+    `CHANGELOG.md merge=union` in .gitattributes, git keeps both tickets' lines.
+- Commit only the files you changed for this ticket, with the ticket ID in the message. Never push.
+- File anything new you discover with `bd create`, linked to TICKET_ID. Keep every ticket title
+  short, at most 60 characters: a plain summary of the change. Details go in the description.
+  When a follow-up touches the same files or functions as another open ticket (see
+  `bd list --status open`), link the two so they don't run side by side: `--deps blocked-by:<id>`
+  makes the follow-up wait for that ticket, `--deps related:<id>` only notes the overlap. Give a
+  follow-up that restructures code most tickets touch (splitting or moving a shared file)
+  `--labels solo`, so it runs with no other ticket beside it.
+
+## Working unattended
+- Nobody reads your turns as they happen: a turn that ends without a tool call ends your work on
+  the ticket. Don't end a turn with a summary that announces your next step, an offer to go on, or
+  a choice that doesn't block the rest: make the choice, note it on the ticket, and go on. Put a
+  status note in the same message as your next tool call.
+- The only stops are the ones under Close: DONE once the ticket is closed, a question when only the
+  maintainer can decide, a deferral when you cannot finish.
+- For a ticket with several parts, keep its acceptance criteria as a todo checklist (TodoWrite or
+  TaskCreate; this overrides the Beads instructions against them) and tick items off as you go.
+  Beads stays the record of the ticket.
+
+## Close
+- Close the ticket only when a full `npm run check` run passes after your last change.
+- If a change can only be verified by CI (for example `.github/workflows/`, or a platform the
+  local checks don't cover), close the ticket once `npm run check` passes, with a note naming the
+  CI job that will verify it ("Awaits CI: <job>"). The batch's pull request runs every CI job
+  before anything reaches the main branch.
+- If the ticket needs a decision only the maintainer can make, ask it as a question and stop; don't
+  wait for an answer in this session. Commit any finished work first, then run
+  `bd create --type=task --labels human --deps blocks:TICKET_ID --title "<the question, at most 60 characters>" --description "<the context, the options and your recommendation>"`
+  and `bd update TICKET_ID --status open --append-notes "Waiting on <the question's ID>: <the question>"`.
+  The ticket comes back to a worker once the question is answered.
+- If the ticket depends on an answered question, read the answer first with `bd show <the question's ID>`.
+- If you cannot finish: note why on the ticket, defer it, and stop.
+
+When you are finished, say DONE and stop.
+
+## Verify
+- Before you close the ticket, once your checks pass after your last commit, have the verifier
+  subagent (.claude/agents/verifier.md) check your change: give it the ticket's ID, TICKET_ID, the
+  commit at which your checks passed (`git rev-parse HEAD`), the commands you ran there, and the
+  file their output is in where you kept one, so that it needn't run them again; nothing of your
+  reasoning. Run it in the foreground and wait for its answer.
+- Fix each gap it reports that affects correctness or the ticket's requirements, commit, run your
+  checks again, and ask it again with the new commit and commands. Run the slower suites again only
+  where the fix touches what they cover; where you don't, give it too the commit at which they last
+  passed. The rest is optional: note on the ticket any you leave.
+- From the second round on, give it the earlier rounds' findings too: each round's verdict and the
+  gaps it raised, as it gave them, still nothing of your reasoning, so that it weighs them rather
+  than start blind. When it disagrees with an earlier round (a line that starts DISAGREES WITH
+  ROUND), don't go round again to settle it: note both rounds' findings on the ticket and ask the
+  maintainer which holds, as a question, as under Close.
+- After three rounds that still end in FAIL, note its findings on the ticket. Close the ticket only
+  when you judge them outside the ticket's requirements; otherwise defer it, as under Close. A fix
+  you committed after the last round isn't lost: the run takes the ticket back once, for one more
+  round on it.

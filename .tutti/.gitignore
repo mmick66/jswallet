@@ -1,0 +1,5 @@
+# tutti's files that aren't committed: the log, the run reports, the run's own files and the playbook.
+tutti.log
+reports/
+run/
+playbook.jsonl

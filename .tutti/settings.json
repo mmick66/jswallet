@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/noesis-sol/tutti/main/schema/settings.json",
+  "version": 1,
+  "concurrent": 4,
+  "keep_awake": true,
+  "checks": {
+    "fast": {
+      "command": "scripts/check-fast.sh",
+      "timeout": "30m"
+    },
+    "full": {
+      "command": "scripts/check-full.sh",
+      "timeout": "60m"
+    },
+    "setup": {
+      "command": "npm ci"
+    }
+  },
+  "workers": {
+    "mcp_servers": [],
+    "model": "opus",
+    "effort": "high"
+  },
+  "templates": {
+    "verifier": 3
+  }
+}
