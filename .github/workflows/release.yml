@@ -105,7 +105,10 @@ jobs:
           security import "$RUNNER_TEMP/developer-id.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -T /usr/bin/codesign
           rm -f "$RUNNER_TEMP/developer-id.p12"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          # Add the keychain to the user search list, one argument per keychain already on it (bash 3.2: no mapfile).
+          keychains=("$KEYCHAIN")
+          while IFS= read -r keychain; do keychains+=("$keychain"); done < <(security list-keychains -d user | sed -e 's/^[[:space:]]*"//' -e 's/"[[:space:]]*$//')
+          security list-keychains -d user -s "${keychains[@]}"
           if [ -n "$API_KEY_P8" ]; then
             printf '%s' "$API_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
             echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
@@ -207,7 +210,8 @@ jobs:
           cp artifacts/make-macOS-X64/zip/darwin/x64/*.zip dist/
           cp artifacts/make-Linux-X64/deb/x64/*.deb artifacts/make-Linux-X64/rpm/x64/*.rpm dist/
           (cd dist && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
-          [ "$(ls dist | wc -l)" -eq 6 ] || { echo "::error::Expected 5 installers and SHA256SUMS.txt"; ls dist; exit 1; }
+          collected=(dist/*)
+          [ ${#collected[@]} -eq 6 ] || { echo "::error::Expected 5 installers and SHA256SUMS.txt"; ls dist; exit 1; }
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
