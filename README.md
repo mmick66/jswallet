@@ -117,3 +117,14 @@ runs ESLint and the tests.
 
 As stated above this is **not** production code.
 It is set to work with *testnet4* by default but by a simple change in `src/env.json` it could well function with real bitcoins!
+
+<!-- tutti:requires -->
+<!-- Generated from "requires" in .tutti/settings.json: change the list, then run tutti requires --readme. -->
+## What to install
+
+What this project needs of the machine, from `"requires"` in `.tutti/settings.json`. `tutti requires` checks each one and installs what it can.
+
+- **actionlint**
+  - check: `actionlint -version`
+  - install: `brew install actionlint`
+<!-- /tutti:requires -->

@@ -16,6 +16,13 @@
       "command": "npm ci"
     }
   },
+  "requires": [
+    {
+      "name": "actionlint",
+      "check": "actionlint -version",
+      "install": "brew install actionlint"
+    }
+  ],
   "workers": {
     "mcp_servers": [],
     "model": "opus",
