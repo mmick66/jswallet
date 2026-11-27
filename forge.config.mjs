@@ -6,7 +6,8 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { execFile } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -49,6 +50,22 @@ export const resignAdHoc = async (outputPaths, exec = run) => {
     }
 };
 
+/**
+ * @electron/packager extracts Electron under <tmpdir>/electron-packager and empties that directory as it
+ * starts, so two package runs on one machine that share it (the default, the OS temp dir) delete each
+ * other's template and fail with ENOENT (jsw-02s). Each run gets a directory of its own instead, which
+ * postPackage removes.
+ */
+export const usePrivateTmpdir = async (packagerConfig, parent = os.tmpdir()) => {
+    packagerConfig.tmpdir = await mkdtemp(path.join(parent, 'jswallet-package-'));
+};
+
+export const removePrivateTmpdir = async (packagerConfig) => {
+    if (typeof packagerConfig.tmpdir !== 'string') return;
+    await rm(packagerConfig.tmpdir, { recursive: true, force: true });
+    delete packagerConfig.tmpdir;
+};
+
 const config = {
     packagerConfig: {
         asar: true,
@@ -56,7 +73,11 @@ const config = {
     },
     rebuildConfig: {},
     hooks: {
+        prePackage: async (forgeConfig) => {
+            await usePrivateTmpdir(forgeConfig.packagerConfig);
+        },
         postPackage: async (forgeConfig, { platform, outputPaths }) => {
+            await removePrivateTmpdir(forgeConfig.packagerConfig);
             if (platform === 'darwin' && !forgeConfig.packagerConfig.osxSign) await resignAdHoc(outputPaths);
         },
     },
