@@ -41,7 +41,7 @@ const electron = vi.hoisted(() => {
 
 vi.mock('electron', () => electron);
 vi.mock('electron-squirrel-startup', () => ({ default: false }));
-vi.mock('electron-devtools-installer', () => ({ default: vi.fn(), REACT_DEVELOPER_TOOLS: {} }));
+vi.mock('../src/main/devtools', () => ({ default: vi.fn() }));
 vi.mock('../src/main/storage', () => ({ databaseDirectory: vi.fn(() => '/userData/db'), migrateLegacyDatabase: vi.fn() }));
 vi.mock('../src/main/wallet.class', () => ({ default: { open: vi.fn(), Defaults: { DBFileName: 'wallets' } } }));
 

@@ -4,7 +4,6 @@ import {
 } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import Wallet from './main/wallet.class';
 import { createIpcHandlers, registerIpcHandlers } from './main/ipc';
 import { createIpcHandle } from './main/security/ipc';
@@ -16,6 +15,7 @@ import {
 } from './main/security/app-protocol';
 import { registerPermissionHandlers } from './main/security/permissions';
 import { contentSecurityPolicy, enforceContentSecurityPolicy } from './main/security/content-security-policy';
+import installReactDevTools from './main/devtools';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -49,7 +49,7 @@ const mainFrame = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow.we
 // DevTools are a development aid only: a failure to install them must not block startup.
 const installDevTools = async () => {
     try {
-        await installExtension(REACT_DEVELOPER_TOOLS);
+        await installReactDevTools(session.defaultSession);
     } catch (error) {
         console.warn('Could not install React Developer Tools:', error);
     }
