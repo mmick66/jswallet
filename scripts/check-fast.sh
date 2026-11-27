@@ -18,7 +18,8 @@ npm run lint
 )
 
 # vitest tests, from package.json:17
+# Under tutti, run no more test files at once than TUTTI_CORES, this run's share of the machine's cores.
 printf '%s\n' 'SUITE: vitest tests'
 (
-npm test
+npm test -- ${TUTTI_CORES:+--maxWorkers="$TUTTI_CORES"}
 )
