@@ -25,7 +25,7 @@
     "@ant-design/icons": "^6.3.4",
     "@bitcoinerlab/secp256k1": "^2.0.0",
     "@seald-io/nedb": "^4.1.2",
-    "antd": "^6.6.5",
+    "antd": "^6.7.2",
     "axios": "^1.20.0",
     "bip32": "^5.0.1",
     "bip39": "^3.1.0",
